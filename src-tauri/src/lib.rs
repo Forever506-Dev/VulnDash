@@ -1,6 +1,7 @@
 // VulnDash — Main entry point
 // Tauri 2 application
 
+mod ai;
 mod commands;
 mod db;
 mod scanner;
@@ -47,6 +48,8 @@ pub fn run() {
             commands::scan::compare_scans,
             commands::scan::auto_fix_deps,
             commands::report::export_html_report,
+            commands::ai::get_ai_fix,
+            commands::ai::read_file_context,
         ])
         .run(tauri::generate_context!())
         .expect("error while running VulnDash");

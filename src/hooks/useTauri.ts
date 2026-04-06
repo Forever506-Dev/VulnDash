@@ -46,6 +46,25 @@ export async function compareScansToPrevious(scanId: string): Promise<{
   return invoke('compare_scans', { scanId });
 }
 
+export async function readFileContext(filePath: string, lineNumber?: number): Promise<{
+  content: string;
+  language: string;
+  total_lines: number;
+  target_line?: number;
+}> {
+  return invoke('read_file_context', { filePath, lineNumber });
+}
+
+export async function getAiFix(findingId: string, dbPathStr: string): Promise<{
+  available: boolean;
+  model?: string;
+  explanation: string;
+  fix_suggestion: string;
+  fixed_code?: string;
+}> {
+  return invoke('get_ai_fix', { findingId, dbPathStr });
+}
+
 export function scoreGrade(score: number): string {
   if (score >= 90) return 'A';
   if (score >= 75) return 'B';

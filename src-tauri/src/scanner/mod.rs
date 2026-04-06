@@ -6,8 +6,6 @@ pub use types::*;
 
 mod types {
     use serde::{Deserialize, Serialize};
-    use chrono::Utc;
-    use uuid::Uuid;
 
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct Project {

@@ -1,4 +1,4 @@
-use rusqlite::{Connection, Result, params};
+use rusqlite::{Connection, Result};
 use std::path::Path;
 use tracing::info;
 

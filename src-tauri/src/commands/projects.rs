@@ -1,5 +1,5 @@
-use crate::scanner::{Project};
-use rusqlite::Connection;
+use crate::scanner::Project;
+use tauri::Manager;
 use uuid::Uuid;
 use chrono::Utc;
 use std::path::PathBuf;
@@ -96,6 +96,6 @@ pub async fn delete_project(app: tauri::AppHandle, project_id: String) -> Result
 fn get_db_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
     app.path()
         .app_data_dir()
-        .map(|d| d.join("vulndash.db"))
-        .map_err(|e| e.to_string())
+        .map(|d: PathBuf| d.join("vulndash.db"))
+        .map_err(|e: tauri::Error| e.to_string())
 }

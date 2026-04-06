@@ -1,5 +1,6 @@
 use crate::scanner::{Scan, Finding};
 use crate::score;
+use tauri::Manager;
 use uuid::Uuid;
 use chrono::Utc;
 use std::path::PathBuf;
@@ -201,6 +202,6 @@ pub async fn list_scans(
 fn get_db_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
     app.path()
         .app_data_dir()
-        .map(|d| d.join("vulndash.db"))
-        .map_err(|e| e.to_string())
+        .map(|d: PathBuf| d.join("vulndash.db"))
+        .map_err(|e: tauri::Error| e.to_string())
 }

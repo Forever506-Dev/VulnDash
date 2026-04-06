@@ -77,10 +77,9 @@ function FindingCard({ finding, onDetail }: { finding: Finding; onDetail?: () =>
 
   return (
     <div
-      className="bg-zinc-900/60 border border-white/[0.06] rounded-xl p-4 cursor-pointer hover:border-white/10 transition-colors"
-      onClick={() => setExpanded(!expanded)}
+      className="bg-zinc-900/60 border border-white/[0.06] rounded-xl p-4 hover:border-white/10 transition-colors"
     >
-      <div className="flex items-start gap-3">
+      <div className="flex items-start gap-3" onClick={() => setExpanded(!expanded)} style={{cursor:'pointer'}}>
         <SeverityBadge severity={finding.severity} />
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-zinc-100 truncate">{finding.title}</p>
@@ -90,13 +89,7 @@ function FindingCard({ finding, onDetail }: { finding: Finding; onDetail?: () =>
             {finding.cvss_score && <span className="ml-2">CVSS: {finding.cvss_score.toFixed(1)}</span>}
           </p>
         </div>
-        <button
-          onClick={e => { e.stopPropagation(); onDetail?.(); }}
-          className="shrink-0 p-1 rounded text-zinc-600 hover:text-zinc-300 hover:bg-zinc-800 transition-colors"
-          title="View details"
-        >
-          <ChevronRight className={`w-4 h-4 transition-transform ${expanded ? 'rotate-90' : ''}`} />
-        </button>
+        <ChevronRight className={`w-4 h-4 text-zinc-600 transition-transform shrink-0 ${expanded ? 'rotate-90' : ''}`} />
       </div>
 
       {expanded && (
@@ -115,6 +108,12 @@ function FindingCard({ finding, onDetail }: { finding: Finding; onDetail?: () =>
               Fix: {finding.fix_version}
             </div>
           )}
+          <button
+            onClick={e => { e.stopPropagation(); onDetail?.(); }}
+            className="mt-1 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 text-xs font-medium hover:bg-red-500/20 transition-colors"
+          >
+            🤖 Open in AI Coach
+          </button>
         </div>
       )}
     </div>
@@ -778,7 +777,7 @@ export default function App() {
         {/* Sidebar footer */}
         <div className="px-4 py-3 border-t border-white/[0.06] space-y-0.5">
           <p className="text-xs text-zinc-600">VulnDash v0.1</p>
-          <p className="text-xs text-zinc-700">Made with ♥ by Vincent Roussel</p>
+          <p className="text-xs text-zinc-700">Made with ♥ by Forever506-Dev</p>
         </div>
       </div>
 

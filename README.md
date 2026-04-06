@@ -171,39 +171,39 @@ See [ARCHITECTURE.md](./ARCHITECTURE.md) for full diagrams and IPC contracts.
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│                   VulnDash Desktop                   │
+│                   VulnDash Desktop                  │
 │                                                     │
-│  ┌──────────────┐    ┌──────────────────────────┐  │
-│  │  React UI    │◄──►│   Tauri IPC Bridge       │  │
-│  │  (Frontend)  │    │   (Commands & Events)    │  │
-│  └──────────────┘    └──────────┬───────────────┘  │
+│  ┌──────────────┐    ┌──────────────────────────┐   │
+│  │  React UI    │◄──►│   Tauri IPC Bridge       │   │
+│  │  (Frontend)  │    │   (Commands & Events)    │   │
+│  └──────────────┘    └──────────┬───────────────┘   │
 │                                 │                   │
 │                    ┌────────────▼────────────────┐  │
-│                    │      Rust Core Engine        │  │
+│                    │      Rust Core Engine       │  │
 │                    │  ┌─────────┐ ┌───────────┐  │  │
 │                    │  │Scanner  │ │ GitHub    │  │  │
 │                    │  │Manager  │ │ Client    │  │  │
 │                    │  └────┬────┘ └─────┬─────┘  │  │
-│                    │       │            │         │  │
-│                    │  ┌────▼────────────▼──────┐  │  │
-│                    │  │    Tool Runners         │  │  │
-│                    │  │ cargo-audit | npm audit │  │  │
-│                    │  │ pip-audit   | gitleaks  │  │  │
-│                    │  │ trivy       | semgrep   │  │  │
-│                    │  └────────────────────────┘  │  │
-│                    │                              │  │
-│                    │  ┌────────────────────────┐  │  │
-│                    │  │   SQLite Database       │  │  │
-│                    │  │  (projects, scans,      │  │  │
-│                    │  │   findings, history)    │  │  │
-│                    │  └────────────────────────┘  │  │
+│                    │       │            │        │  │
+│                    │  ┌────▼────────────▼──────┐ │  │
+│                    │  │    Tool Runners        │ │  │
+│                    │  │ cargo-audit | npm audit│ │  │
+│                    │  │ pip-audit   | gitleaks │ │  │
+│                    │  │ trivy       | semgrep  │ │  │
+│                    │  └────────────────────────┘ │  │
+│                    │                             │  │
+│                    │  ┌────────────────────────┐ │  │
+│                    │  │   SQLite Database      │ │  │
+│                    │  │  (projects, scans,     │ │  │
+│                    │  │   findings, history)   │ │  │
+│                    │  └────────────────────────┘ │  │
 │                    └─────────────────────────────┘  │
 └─────────────────────────────────────────────────────┘
                           │
                     ┌─────▼──────┐
-                    │  AI Engine  │
-                    │  (Ollama /  │
-                    │   OpenAI)   │
+                    │  AI Engine │
+                    │  (Ollama / │
+                    │   OpenAI)  │
                     └────────────┘
 ```
 
@@ -261,4 +261,4 @@ MIT — Open source, free forever for individual developers.
 
 ---
 
-*Built by Vincent Roussel & Hexis 🔐*
+*Built by Forever506-Dev 🔐*

@@ -69,17 +69,46 @@ pub async fn start_scan(
 
     info!("Scan {} started for project {}", scan.id, project_id);
 
-    // Run all scanners
+    // Run all scanners — search recursively for package manifests
+    // Skip virtual envs, node_modules, build artifacts
+    let skip_dirs = ["node_modules", ".venv", "venv", "env", "target", ".git", "__pycache__", ".tox"];
+
+    let mut scan_paths: Vec<PathBuf> = vec![path.clone()];
+    // Find subdirectories with manifests (up to 3 levels deep)
+    fn find_manifest_dirs(root: &PathBuf, skip: &[&str], depth: u32) -> Vec<PathBuf> {
+        if depth == 0 { return vec![]; }
+        let mut dirs = vec![];
+        let Ok(entries) = std::fs::read_dir(root) else { return dirs; };
+        for entry in entries.flatten() {
+            let p = entry.path();
+            if !p.is_dir() { continue; }
+            let name = p.file_name().and_then(|n| n.to_str()).unwrap_or("");
+            if skip.contains(&name) { continue; }
+            // Check if this subdir has package manifests
+            if p.join("Cargo.lock").exists() || p.join("package-lock.json").exists() || p.join("requirements.txt").exists() || p.join("pyproject.toml").exists() {
+                dirs.push(p.clone());
+            }
+            dirs.extend(find_manifest_dirs(&p, skip, depth - 1));
+        }
+        dirs
+    }
+    scan_paths.extend(find_manifest_dirs(&path, &skip_dirs, 3));
+    // Deduplicate
+    scan_paths.sort();
+    scan_paths.dedup();
+    info!("Scanning {} directories for manifests", scan_paths.len());
+
     let mut all_findings: Vec<Finding> = vec![];
+    for scan_path in &scan_paths {
+        let cargo_findings = crate::scanner::cargo_audit::scan(scan_path, &scan.id).await;
+        let npm_findings = crate::scanner::npm_audit::scan(scan_path, &scan.id).await;
+        let pip_findings = crate::scanner::pip_audit::scan(scan_path, &scan.id).await;
+        all_findings.extend(cargo_findings);
+        all_findings.extend(npm_findings);
+        all_findings.extend(pip_findings);
+    }
 
-    let cargo_findings = crate::scanner::cargo_audit::scan(&path, &scan.id).await;
-    let npm_findings = crate::scanner::npm_audit::scan(&path, &scan.id).await;
-    let pip_findings = crate::scanner::pip_audit::scan(&path, &scan.id).await;
-
-    all_findings.extend(cargo_findings);
-    all_findings.extend(npm_findings);
-    all_findings.extend(pip_findings);
-
+    // Gitleaks scans the whole tree once (not per-subdir)
     let gitleaks_findings = crate::scanner::gitleaks::scan(&path, &scan.id).await;
     all_findings.extend(gitleaks_findings);
 

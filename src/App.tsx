@@ -843,30 +843,6 @@ export default function App() {
                 Watch
               </button>
             </div>
-
-            {/* Stats bar */}
-            {summary && (
-              <div className="flex items-center gap-6 px-6 py-3 border-b border-white/[0.06] bg-zinc-950/20">
-                <div className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-red-500"></span>
-                  <span className="text-xs text-zinc-400">{summary.critical} Critical</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-orange-400"></span>
-                  <span className="text-xs text-zinc-400">{summary.high} High</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-yellow-400"></span>
-                  <span className="text-xs text-zinc-400">{summary.medium} Medium</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-blue-400"></span>
-                  <span className="text-xs text-zinc-400">{summary.low} Low</span>
-                </div>
-                <div className="ml-auto flex items-center gap-2">
-                  <span className="text-xs text-zinc-500">{summary.total} total findings</span>
-                </div>
-              </div>
             )}
 
             {/* Tab toggle */}
@@ -910,18 +886,42 @@ export default function App() {
                   </div>
                 </div>
               ) : (
-                <div className="flex gap-6">
-                  {/* Score + summary */}
+                <div className="flex flex-col gap-4">
+                  {/* Score header — full width, compact */}
                   {selectedProject.score != null && (
-                    <div className="w-48 shrink-0">
+                    <div className="flex items-center gap-6 bg-zinc-900/40 border border-white/[0.06] rounded-2xl px-6 py-4">
                       <ScoreGauge score={selectedProject.score} />
+                      {summary && (
+                        <div className="flex flex-wrap gap-4 flex-1">
+                          <div className="flex flex-col items-center gap-0.5">
+                            <span className="text-2xl font-bold text-red-500">{summary.critical}</span>
+                            <span className="text-xs text-zinc-500">Critical</span>
+                          </div>
+                          <div className="flex flex-col items-center gap-0.5">
+                            <span className="text-2xl font-bold text-orange-400">{summary.high}</span>
+                            <span className="text-xs text-zinc-500">High</span>
+                          </div>
+                          <div className="flex flex-col items-center gap-0.5">
+                            <span className="text-2xl font-bold text-yellow-400">{summary.medium}</span>
+                            <span className="text-xs text-zinc-500">Medium</span>
+                          </div>
+                          <div className="flex flex-col items-center gap-0.5">
+                            <span className="text-2xl font-bold text-blue-400">{summary.low}</span>
+                            <span className="text-xs text-zinc-500">Low</span>
+                          </div>
+                          <div className="flex flex-col items-center gap-0.5 ml-auto">
+                            <span className="text-2xl font-bold text-zinc-300">{summary.total}</span>
+                            <span className="text-xs text-zinc-500">Total</span>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
 
-                  {/* Findings */}
-                  <div className="flex-1 min-w-0">
+                  {/* Findings — full width */}
+                  <div className="w-full">
                     {/* Filter */}
-                    <div className="flex items-center gap-2 mb-4">
+                    <div className="flex items-center gap-2 mb-3">
                       <span className="text-xs text-zinc-500">Filter:</span>
                       {['all', 'critical', 'high', 'medium', 'low', 'info'].map(sev => (
                         <button
@@ -945,7 +945,7 @@ export default function App() {
                           <div className="flex flex-col items-center justify-center py-16 gap-4">
                             <div className="relative">
                               <div className="w-20 h-20 rounded-full bg-green-500/10 border border-green-500/30 flex items-center justify-center">
-                                <CheckCircle className="w-10 h-10 text-green-400 animate-[spin_0.5s_ease-out]" />
+                                <CheckCircle className="w-10 h-10 text-green-400" />
                               </div>
                               <span className="absolute -top-1 -right-1 text-2xl">🎉</span>
                             </div>
@@ -955,7 +955,7 @@ export default function App() {
                         ) : (
                           <div className="flex items-center gap-2 text-green-400 text-sm">
                             <CheckCircle className="w-4 h-4" />
-                            No {filterSeverity === 'all' ? '' : filterSeverity + ' '}findings —
+                            No {filterSeverity === 'all' ? '' : filterSeverity + ' '}findings
                           </div>
                         )
                       ) : (

@@ -843,7 +843,6 @@ export default function App() {
                 Watch
               </button>
             </div>
-            )}
 
             {/* Tab toggle */}
             <div className="flex items-center gap-1 px-6 py-3 border-b border-white/[0.06]">

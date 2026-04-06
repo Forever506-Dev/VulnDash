@@ -14,6 +14,10 @@ export async function checkTools(): Promise<ToolStatus[]> {
   return invoke('check_tools');
 }
 
+export async function installTool(toolName: string): Promise<string> {
+  return invoke('install_tool', { toolName });
+}
+
 export async function listProjects(): Promise<Project[]> {
   return invoke('list_projects');
 }

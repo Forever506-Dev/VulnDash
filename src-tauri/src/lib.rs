@@ -54,6 +54,7 @@ pub fn run() {
             commands::ai::read_file_context,
             commands::ai::save_file_content,
             commands::tools::check_tools,
+            commands::tools::install_tool,
             commands::watch::toggle_watch,
         ])
         .run(tauri::generate_context!())

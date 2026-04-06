@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Shield, FolderOpen, RefreshCw, Trash2, ChevronRight, CheckCircle, GitBranch, X, Settings, Plus } from 'lucide-react';
 import type { Project, Scan, Finding } from './types';
-import { listProjects, addProjectLocal, addProjectGithub, deleteProject, startScan, getScanResults, listScans, autoFixDeps, exportHtmlReport, compareScansToPrevious, checkTools, scoreGrade, scoreColor, SEVERITY_COLORS, toggleWatch } from './hooks/useTauri';
+import { listProjects, addProjectLocal, addProjectGithub, deleteProject, startScan, getScanResults, listScans, autoFixDeps, exportHtmlReport, compareScansToPrevious, checkTools, installTool, scoreGrade, scoreColor, SEVERITY_COLORS, toggleWatch } from './hooks/useTauri';
 import type { ToolStatus } from './hooks/useTauri';
 import FindingDetailPanel from './components/FindingDetailPanel';
 import { open, save } from '@tauri-apps/plugin-dialog';
@@ -396,13 +396,35 @@ function HistoryView({ scans }: { scans: Scan[] }) {
 function OnboardingScreen() {
   const [tools, setTools] = useState<ToolStatus[]>([]);
   const [loading, setLoading] = useState(true);
+  const [installing, setInstalling] = useState<Record<string, boolean>>({});
+  const [installMessages, setInstallMessages] = useState<Record<string, { text: string; ok: boolean }>>({});
 
-  useEffect(() => {
+  const refreshTools = () => {
+    setLoading(true);
     checkTools()
       .then(setTools)
       .catch(console.error)
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    refreshTools();
   }, []);
+
+  const handleInstall = async (toolName: string) => {
+    setInstalling(prev => ({ ...prev, [toolName]: true }));
+    setInstallMessages(prev => ({ ...prev, [toolName]: { text: '', ok: true } }));
+    try {
+      const msg = await installTool(toolName);
+      setInstallMessages(prev => ({ ...prev, [toolName]: { text: msg, ok: true } }));
+      refreshTools();
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      setInstallMessages(prev => ({ ...prev, [toolName]: { text: errMsg, ok: false } }));
+    } finally {
+      setInstalling(prev => ({ ...prev, [toolName]: false }));
+    }
+  };
 
   const toolIcons: Record<string, string> = {
     'cargo-audit': '🦀',
@@ -461,6 +483,20 @@ function OnboardingScreen() {
                       >
                         {tool.install_url.replace('https://', '')}
                       </a>
+                    )}
+                    {tool.install_url && (
+                      <button
+                        onClick={() => handleInstall(tool.name)}
+                        disabled={installing[tool.name]}
+                        className="mt-1 w-full text-xs px-2 py-1 rounded bg-red-600/20 hover:bg-red-600/40 border border-red-500/30 text-red-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                      >
+                        {installing[tool.name] ? '⏳ Installing…' : '⬇ Install'}
+                      </button>
+                    )}
+                    {installMessages[tool.name]?.text && (
+                      <p className={`text-xs mt-1 whitespace-pre-wrap ${installMessages[tool.name].ok ? 'text-green-400' : 'text-red-400'}`}>
+                        {installMessages[tool.name].text}
+                      </p>
                     )}
                   </div>
                 )}

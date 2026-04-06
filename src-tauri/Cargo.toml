@@ -43,3 +43,6 @@ regex = "1"
 
 # File system watcher for watch mode
 notify = { version = "6", features = ["serde"] }
+
+# Zip extraction for Windows gitleaks auto-install
+zip = "2"

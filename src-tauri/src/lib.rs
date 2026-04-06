@@ -52,6 +52,7 @@ pub fn run() {
             commands::report::export_html_report,
             commands::ai::get_ai_fix,
             commands::ai::read_file_context,
+            commands::ai::save_file_content,
             commands::tools::check_tools,
             commands::watch::toggle_watch,
         ])

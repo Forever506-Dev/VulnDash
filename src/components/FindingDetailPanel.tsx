@@ -4,7 +4,7 @@ import type { editor as MonacoEditor } from 'monaco-editor';
 import { X, Bot, Loader2, AlertTriangle, Copy, Check } from 'lucide-react';
 import { appDataDir } from '@tauri-apps/api/path';
 import type { Finding } from '../types';
-import { readFileContext, getAiFix } from '../hooks/useTauri';
+import { readFileContext, getAiFix, saveFileContent } from '../hooks/useTauri';
 import { SEVERITY_COLORS } from '../types';
 
 interface Props {
@@ -34,6 +34,11 @@ export default function FindingDetailPanel({ finding, onClose }: Props) {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [editorContent, setEditorContent] = useState<string>('');
+  const [saving, setSaving] = useState(false);
+  const [saveMsg, setSaveMsg] = useState<string | null>(null);
+  const [applying, setApplying] = useState(false);
   const editorRef = useRef<MonacoEditor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<Monaco | null>(null);
   const decorationsRef = useRef<string[]>([]);
@@ -44,7 +49,7 @@ export default function FindingDetailPanel({ finding, onClose }: Props) {
       return;
     }
     readFileContext(finding.file_path, finding.line_number ?? undefined)
-      .then(setFileCtx)
+      .then(ctx => { setFileCtx(ctx); setEditorContent(ctx.content); })
       .catch(() => setFileError('unreadable'));
   }, [finding.id]);
 
@@ -73,6 +78,62 @@ export default function FindingDetailPanel({ finding, onClose }: Props) {
     ]);
     decorationsRef.current = newDecorations;
     ed.revealLineInCenter(line);
+  }
+
+  async function handleSaveFile() {
+    if (!finding.file_path || !editorRef.current) return;
+    setSaving(true);
+    setSaveMsg(null);
+    try {
+      const content = editorRef.current.getValue();
+      await saveFileContent(finding.file_path, content);
+      setSaveMsg('✅ Saved!');
+      setEditMode(false);
+      // Update local state
+      setEditorContent(content);
+      setFileCtx(prev => prev ? { ...prev, content } : prev);
+    } catch (e: unknown) {
+      setSaveMsg('❌ ' + (e instanceof Error ? e.message : String(e)));
+    } finally {
+      setSaving(false);
+      setTimeout(() => setSaveMsg(null), 3000);
+    }
+  }
+
+  async function handleApplyFix() {
+    if (!aiFix?.fixed_code && !aiFix?.fix_suggestion) return;
+    if (!finding.file_path) return;
+    setApplying(true);
+    setSaveMsg(null);
+    try {
+      // Replace the vulnerable line with the fixed code if we have it
+      const fixCode = aiFix.fixed_code || '';
+      if (fixCode && finding.line_number && editorRef.current) {
+        const model = editorRef.current.getModel();
+        if (model) {
+          // Apply edit at the vulnerable line
+          const lineCount = model.getLineCount();
+          const targetLine = Math.min(finding.line_number, lineCount);
+          const lineContent = model.getLineContent(targetLine);
+          const fixLines = fixCode.split('\n');
+          // Find the matching line in fixCode (first non-empty line that looks like code)
+          const fixLine = fixLines.find(l => l.trim() && !l.startsWith('//') && !l.startsWith('#')) || fixLines[0] || lineContent;
+          editorRef.current.executeEdits('apply-fix', [{
+            range: { startLineNumber: targetLine, startColumn: 1, endLineNumber: targetLine, endColumn: lineContent.length + 1 },
+            text: fixLine,
+          }]);
+          setSaveMsg('✅ Fix applied — click Save to write to disk');
+          setEditMode(true);
+        }
+      } else {
+        setSaveMsg('ℹ️ No line-level fix available — see fix suggestion above');
+      }
+    } catch (e: unknown) {
+      setSaveMsg('❌ ' + (e instanceof Error ? e.message : String(e)));
+    } finally {
+      setApplying(false);
+      setTimeout(() => setSaveMsg(null), 5000);
+    }
   }
 
   async function handleGetAiFix() {
@@ -172,13 +233,37 @@ export default function FindingDetailPanel({ finding, onClose }: Props) {
                 .vuln-line-highlight { background: rgba(229, 53, 53, 0.15); border-left: 3px solid #e53535; }
                 @keyframes slideInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
               `}</style>
+              {/* Editor toolbar */}
+              <div className="flex items-center gap-2 px-3 py-1.5 border-b border-white/[0.06] bg-zinc-950/50">
+                <span className="text-xs text-zinc-600 font-mono flex-1 truncate">{fileCtx.language}</span>
+                {saveMsg && <span className="text-xs text-zinc-400">{saveMsg}</span>}
+                {editMode ? (
+                  <>
+                    <button
+                      onClick={() => { setEditMode(false); setEditorContent(fileCtx.content); }}
+                      className="px-2 py-1 rounded text-xs text-zinc-400 hover:text-zinc-200 transition-colors"
+                    >Cancel</button>
+                    <button
+                      onClick={handleSaveFile}
+                      disabled={saving}
+                      className="px-2.5 py-1 rounded-lg bg-green-500/10 text-green-400 border border-green-500/20 text-xs font-medium hover:bg-green-500/20 transition-colors disabled:opacity-50"
+                    >{saving ? 'Saving...' : '💾 Save'}</button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => setEditMode(true)}
+                    className="px-2.5 py-1 rounded-lg bg-zinc-800 text-zinc-400 border border-white/[0.06] text-xs font-medium hover:bg-zinc-700 transition-colors"
+                  >✏️ Edit</button>
+                )}
+              </div>
               <Editor
-                height="100%"
+                height="calc(100% - 34px)"
                 language={fileCtx.language}
-                value={fileCtx.content}
+                value={editorContent}
+                onChange={v => { if (editMode) setEditorContent(v || ''); }}
                 theme="vs-dark"
                 options={{
-                  readOnly: true,
+                  readOnly: !editMode,
                   minimap: { enabled: false },
                   scrollBeyondLastLine: false,
                   fontSize: 12,
@@ -287,7 +372,16 @@ export default function FindingDetailPanel({ finding, onClose }: Props) {
               {/* Fixed code snippet */}
               {aiFix.fixed_code && (
                 <div className="rounded-xl bg-zinc-950 border border-green-500/20 p-4">
-                  <p className="text-xs font-semibold text-green-400 uppercase tracking-wider mb-2">Fixed Code</p>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-semibold text-green-400 uppercase tracking-wider">Fixed Code</p>
+                    <button
+                      onClick={handleApplyFix}
+                      disabled={applying || !finding.file_path}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-500/10 text-green-400 border border-green-500/20 text-xs font-semibold hover:bg-green-500/20 transition-colors disabled:opacity-50"
+                    >
+                      {applying ? '⏳ Applying...' : '⚡ Apply Fix'}
+                    </button>
+                  </div>
                   <pre className="text-xs text-zinc-200 font-mono overflow-x-auto whitespace-pre-wrap">{aiFix.fixed_code}</pre>
                 </div>
               )}

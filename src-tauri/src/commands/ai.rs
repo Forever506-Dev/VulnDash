@@ -241,3 +241,21 @@ pub async fn read_file_context(
         target_line: line_number,
     })
 }
+
+/// Save edited file content back to disk (creates .vulndash.bak backup first).
+#[tauri::command]
+pub async fn save_file_content(file_path: String, content: String) -> Result<(), String> {
+    let path = std::path::Path::new(&file_path);
+    if !path.exists() {
+        return Err(format!("File not found: {}", file_path));
+    }
+    // Create backup
+    let backup_path = format!("{}.vulndash.bak", file_path);
+    if let Err(e) = std::fs::copy(&file_path, &backup_path) {
+        tracing::warn!("Could not create backup: {}", e);
+    }
+    // Write new content
+    std::fs::write(&file_path, &content).map_err(|e| e.to_string())?;
+    tracing::info!("Saved file: {}", file_path);
+    Ok(())
+}

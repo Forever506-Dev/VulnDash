@@ -57,6 +57,10 @@ export async function compareScansToPrevious(scanId: string): Promise<{
   return invoke('compare_scans', { scanId });
 }
 
+export async function saveFileContent(filePath: string, content: string): Promise<void> {
+  return invoke('save_file_content', { filePath, content });
+}
+
 export async function readFileContext(filePath: string, lineNumber?: number): Promise<{
   content: string;
   language: string;

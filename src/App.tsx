@@ -777,8 +777,14 @@ export default function App() {
       <div className="w-72 flex flex-col border-r border-white/[0.06] bg-zinc-950/50">
         {/* Header */}
         <div className="flex items-center gap-2.5 px-4 py-4 border-b border-white/[0.06]">
-          <Shield className="w-5 h-5 text-red-500" />
-          <span className="font-bold text-zinc-100">VulnDash</span>
+          <button
+            onClick={() => setSelectedProject(null)}
+            className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+            title="System Status"
+          >
+            <Shield className="w-5 h-5 text-red-500" />
+            <span className="font-bold text-zinc-100">VulnDash</span>
+          </button>
           <button onClick={() => setShowSettings(true)} className="ml-auto text-zinc-600 hover:text-zinc-400 transition-colors">
             <Settings className="w-4 h-4" />
           </button>
@@ -833,12 +839,7 @@ export default function App() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {!selectedProject ? (
-          projects.length === 0 && !loading ? (
-            <OnboardingScreen />
-          ) : (
-            <div className="flex-1 flex flex-col items-center justify-center gap-4 text-zinc-600">
-              <Shield className="w-16 h-16 opacity-20" />
-              <p className="text-lg">Select a project to view its security status</p>
+          <OnboardingScreen />
             </div>
           )
         ) : (

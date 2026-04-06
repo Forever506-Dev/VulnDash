@@ -26,14 +26,6 @@ fn check_command(cmd: &str, args: &[&str]) -> Option<String> {
         .filter(|s| !s.is_empty())
 }
 
-fn which(cmd: &str) -> bool {
-    Command::new("which")
-        .arg(cmd)
-        .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false)
-}
-
 #[tauri::command]
 pub async fn check_tools() -> Result<Vec<ToolStatus>, String> {
     let mut tools = Vec::new();

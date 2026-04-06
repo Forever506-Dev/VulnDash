@@ -68,10 +68,34 @@ No more running 5 different CLI tools manually. No more forgetting to check your
 
 ## Prerequisites
 
+### 📦 For end users (just running VulnDash)
+
+Download the installer for your platform from the [latest release](https://github.com/Forever506-Dev/VulnDash/releases/latest) — no prerequisites needed for Windows/macOS.
+
+**Optional — for AI-powered fix suggestions:**
+1. Install **Ollama Desktop** from [ollama.ai](https://ollama.ai)
+2. Pull the recommended model:
+   ```bash
+   ollama pull codellama
+   ```
+   VulnDash auto-detects Ollama when it's running. You can also use `mistral` or any other model — VulnDash picks the best available.
+
+**Optional — for Rust project scanning (cargo-audit):**
+```bash
+# Install Rust first:
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+# Then install cargo-audit:
+cargo install cargo-audit
+```
+
+---
+
+### 🛠️ For developers (building from source)
+
 - **Node.js 18+** — [nodejs.org](https://nodejs.org)
 - **Rust 1.70+** — [rustup.rs](https://rustup.rs)
 
-### Platform-specific dependencies
+### Platform-specific build dependencies
 
 **Windows**
 ```
@@ -240,6 +264,7 @@ See [CHANGELOG.md](./CHANGELOG.md) for release notes.
 - [x] Cross-platform builds (Windows, Linux, macOS)
 
 ### v0.2 (Planned)
+- [ ] **Auto-update** — check GitHub releases on startup, notify user of new versions, one-click update
 - [ ] Docker image scanning (Trivy)
 - [ ] SBOM generation (CycloneDX)
 - [ ] License compliance checker
@@ -248,6 +273,7 @@ See [CHANGELOG.md](./CHANGELOG.md) for release notes.
 - [ ] CI/CD CLI mode
 
 ### v1.0 (Future)
+- [ ] **Silent auto-update** — download and install new versions automatically in background
 - [ ] Code pattern analysis (Semgrep)
 - [ ] Custom detection rules
 - [ ] Team/organization support

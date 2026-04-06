@@ -46,3 +46,56 @@ pub fn color_class(score: i32) -> &'static str {
         _        => "text-red-500",
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::scanner::{Finding, Severity};
+
+    fn make_finding(severity: Severity) -> Finding {
+        Finding {
+            id: "test".to_string(),
+            scan_id: "scan".to_string(),
+            tool: "test".to_string(),
+            severity,
+            title: "Test".to_string(),
+            description: None,
+            file_path: None,
+            line_number: None,
+            cve_id: None,
+            cvss_score: None,
+            fix_version: None,
+            ai_advice: None,
+            mitre_id: None,
+            status: "open".to_string(),
+        }
+    }
+
+    #[test]
+    fn test_clean_project_scores_100() {
+        assert_eq!(calculate(&[]), 100);
+    }
+
+    #[test]
+    fn test_critical_deducts_20() {
+        let findings = vec![make_finding(Severity::Critical)];
+        assert_eq!(calculate(&findings), 80);
+    }
+
+    #[test]
+    fn test_score_never_below_zero() {
+        let findings = vec![
+            make_finding(Severity::Critical),
+            make_finding(Severity::Critical),
+            make_finding(Severity::Critical),
+            make_finding(Severity::Critical),
+            make_finding(Severity::Critical),
+        ];
+        assert!(calculate(&findings) >= 0);
+    }
+
+    #[test]
+    fn test_grade_a() { assert_eq!(grade(95), "A"); }
+    #[test]
+    fn test_grade_f() { assert_eq!(grade(30), "F"); }
+}

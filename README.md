@@ -3,9 +3,10 @@
 > **The AI-powered security coach for every developer.**
 > Scan your code, your dependencies, your secrets — understand your risk, fix it fast.
 
-![Status](https://img.shields.io/badge/status-planning-blue)
+![Status](https://img.shields.io/badge/status-beta-green)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey)
 ![Stack](https://img.shields.io/badge/stack-Tauri%202%20%7C%20Rust%20%7C%20React%2019-orange)
+![License](https://img.shields.io/badge/license-MIT-blue)
 
 ---
 
@@ -14,6 +15,16 @@
 VulnDash is a **cross-platform desktop application** that acts as a personal security coach for developers. It scans your projects — whether from GitHub or local folders — and gives you a complete, actionable security picture in seconds.
 
 No more running 5 different CLI tools manually. No more forgetting to check your deps before a release. VulnDash does it all in one place, with a dashboard that makes security accessible to every developer, not just security experts.
+
+**Privacy-first.** Everything runs locally by default. No telemetry. No cloud required.
+
+---
+
+## Screenshots
+
+> _Screenshots coming soon — beta release_
+
+<!-- Add screenshots here once UI is stabilized -->
 
 ---
 
@@ -25,8 +36,8 @@ No more running 5 different CLI tools manually. No more forgetting to check your
 - **Auto-rescan** — watch mode for continuous scanning while you code
 
 ### 🔍 What it scans
-- **Dependencies** — cargo audit, npm audit, pip-audit, Trivy (Docker images)
-- **Secrets & credentials** — hardcoded API keys, passwords, tokens (truffleHog / gitleaks integration)
+- **Dependencies** — cargo-audit, npm audit, pip-audit, Trivy (Docker images)
+- **Secrets & credentials** — hardcoded API keys, passwords, tokens (gitleaks integration)
 - **License compliance** — detect restrictive licenses in your deps
 - **SBOM generation** — Software Bill of Materials (CycloneDX format)
 - **Known CVEs** — mapped to CVSS scores, severity levels, fix versions
@@ -37,8 +48,8 @@ No more running 5 different CLI tools manually. No more forgetting to check your
 - **Security Score** — 0-100 score per project with trend over time
 - **Risk breakdown** — Critical / High / Medium / Low / Info
 - **MITRE ATT&CK mapping** — vulnerability categories mapped to attack techniques
-- **Fix suggestions** — AI-powered remediation advice per finding
-- **Dependency graph** — visual tree of deps with vuln highlights
+- **AI fix suggestions** — AI-powered remediation advice per finding via Ollama (local LLM)
+- **Scan diff view** — see what's new vs what's been fixed between scans
 - **History** — track how your security score evolves with each scan
 
 ### 🤖 AI Security Coach
@@ -48,31 +59,115 @@ No more running 5 different CLI tools manually. No more forgetting to check your
 - Context-aware — explains why something is dangerous for YOUR stack
 
 ### 📤 Reports & Integrations
-- Export PDF/HTML security reports
-- GitHub PR comments (post scan results as PR review)
+- Export HTML security reports
+- Desktop notifications
 - Webhook notifications (Slack, Discord, Telegram)
 - CI/CD mode — run as CLI for pipeline integration
 
 ---
 
-## Tech Stack
+## Prerequisites
 
-| Layer | Technology | Why |
-|---|---|---|
-| Desktop framework | **Tauri 2** | Rust backend, tiny binary, cross-platform, secure |
-| UI | **React 19 + TypeScript** | Modern, component-based, reuse from LearnForge |
-| Styling | **Tailwind CSS v4** | Already mastered in our projects |
-| Charts | **Recharts** | Clean, React-native charting |
-| Rust backend | **Rust** | Fast scanning, process spawning, file system |
-| Local DB | **SQLite via rusqlite** | Lightweight, embedded, no server needed |
-| AI features | **Ollama (local) + OpenAI fallback** | Privacy-first, works offline |
-| GitHub API | **Octokit (REST)** | Official GitHub client |
+- **Node.js 18+** — [nodejs.org](https://nodejs.org)
+- **Rust 1.70+** — [rustup.rs](https://rustup.rs)
+
+### Platform-specific dependencies
+
+**Windows**
+```
+winget install Microsoft.VisualStudio.2022.BuildTools
+```
+(Select "Desktop development with C++" workload)
+
+**Linux (Ubuntu/Debian)**
+```bash
+sudo apt install libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev
+```
+
+**macOS**
+```bash
+xcode-select --install
+```
+
+---
+
+## Quick Start
+
+1. **Clone the repo**
+   ```bash
+   git clone https://github.com/Forever506-Dev/VulnDash
+   cd VulnDash
+   ```
+
+2. **Run the setup script** *(optional — installs prerequisites automatically)*
+   ```bash
+   # Linux/macOS
+   bash scripts/setup.sh
+
+   # Windows (PowerShell)
+   .\scripts\setup.ps1
+   ```
+
+3. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+4. **Start the development build**
+   ```bash
+   npm run tauri dev
+   ```
+
+5. **Build for production**
+   ```bash
+   npm run tauri build
+   ```
+
+---
+
+## Development
+
+### Project Structure
+
+```
+VulnDash/
+├── src/                  # React frontend (TypeScript)
+│   ├── components/       # UI components
+│   ├── hooks/            # Tauri IPC hooks
+│   └── stores/           # Zustand state stores
+├── src-tauri/            # Rust backend
+│   ├── src/
+│   │   ├── scanner/      # Scanner modules (each implements Scanner trait)
+│   │   ├── db/           # SQLite database access layer
+│   │   └── main.rs       # Entry point + Tauri commands
+│   └── Cargo.toml
+├── scripts/              # Setup scripts
+├── .github/workflows/    # CI/CD workflows
+└── ARCHITECTURE.md       # Full component map & DB schema
+```
+
+### Running Tests
+
+```bash
+# Rust tests
+cd src-tauri && cargo test
+
+# Lint Rust code
+cd src-tauri && cargo clippy
+```
+
+### Key Architecture Decisions
+
+- **No REST API** — frontend/backend communicate exclusively via Tauri IPC (commands & events)
+- **Local-first** — SQLite embedded database, no server required
+- **Privacy** — no telemetry, AI features use local Ollama by default
+- **Dark theme only** — deep blacks, red accent (`#e53535`), severity color system
+
+See [ARCHITECTURE.md](./ARCHITECTURE.md) for full diagrams and IPC contracts.
 
 ---
 
 ## Architecture Overview
-
-See [ARCHITECTURE.md](./ARCHITECTURE.md) for full diagrams.
 
 ```
 ┌─────────────────────────────────────────────────────┐
@@ -114,14 +209,26 @@ See [ARCHITECTURE.md](./ARCHITECTURE.md) for full diagrams.
 
 ---
 
+## Contributing
+
+Contributions are welcome! Please read [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines on how to get started, submit changes, and follow code style conventions.
+
+---
+
+## Changelog
+
+See [CHANGELOG.md](./CHANGELOG.md) for release notes.
+
+---
+
 ## Roadmap
 
-### MVP (v0.1)
-- [ ] App shell (Tauri 2 + React 19 + Tailwind v4)
-- [ ] Local folder scanning (cargo-audit, npm audit, pip-audit)
-- [ ] Basic dashboard with findings list
-- [ ] SQLite persistence (projects + scan history)
-- [ ] Security score calculation
+### MVP (v0.1) ✅
+- [x] App shell (Tauri 2 + React 19 + Tailwind v4)
+- [x] Local folder scanning (cargo-audit, npm audit, pip-audit)
+- [x] Basic dashboard with findings list
+- [x] SQLite persistence (projects + scan history)
+- [x] Security score calculation
 
 ### v0.2
 - [ ] GitHub integration (OAuth + repo browser)
@@ -140,12 +247,6 @@ See [ARCHITECTURE.md](./ARCHITECTURE.md) for full diagrams.
 - [ ] Docker image scanning (Trivy)
 - [ ] GitHub PR integration
 - [ ] Code pattern analysis (Semgrep rules)
-
----
-
-## Getting Started
-
-> Documentation coming soon. Project is in planning phase.
 
 ---
 

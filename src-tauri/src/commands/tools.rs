@@ -54,6 +54,7 @@ fn check_command_cross(base: &str, args: &[&str]) -> Option<String> {
 
 /// Check if gitleaks is available, including in the app's local data dir
 /// (where it gets auto-installed on Windows).
+#[cfg_attr(not(target_os = "windows"), allow(unused_variables))]
 fn check_gitleaks(app_local_data_dir: Option<&PathBuf>) -> Option<String> {
     // Check PATH first
     if let Some(v) = check_command_cross("gitleaks", &["version"]) {

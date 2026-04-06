@@ -30,7 +30,7 @@ pub async fn scan(path: &Path, scan_id: &str) -> Vec<Finding> {
     }
 }
 
-fn parse_cargo_audit_json(json_str: &str, scan_id: &str) -> Vec<Finding> {
+pub(crate) fn parse_cargo_audit_json(json_str: &str, scan_id: &str) -> Vec<Finding> {
     let mut findings = vec![];
 
     let Ok(data) = serde_json::from_str::<serde_json::Value>(json_str) else {
@@ -147,5 +147,53 @@ fn cvss_to_severity(cvss: Option<f64>) -> Severity {
         Some(s) if s >= 4.0 => Severity::Medium,
         Some(s) if s > 0.0 => Severity::Low,
         _ => Severity::Medium, // unknown CVSS = medium by default
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_empty_output() {
+        let findings = parse_cargo_audit_json("{}", "test-scan-id");
+        assert!(findings.is_empty());
+    }
+
+    #[test]
+    fn test_parse_vulnerability() {
+        let json = r#"{
+            "vulnerabilities": {
+                "list": [{
+                    "advisory": {
+                        "id": "RUSTSEC-2023-001",
+                        "title": "Test vuln",
+                        "description": "A test vulnerability"
+                    },
+                    "package": {
+                        "name": "test-crate",
+                        "version": "1.0.0"
+                    }
+                }]
+            }
+        }"#;
+        let findings = parse_cargo_audit_json(json, "test-scan-id");
+        assert_eq!(findings.len(), 1);
+        assert!(findings[0].title.contains("test-crate"));
+    }
+
+    #[test]
+    fn test_parse_warning() {
+        let json = r#"{
+            "warnings": {
+                "unmaintained": [{
+                    "package": { "name": "old-crate", "version": "0.1.0" },
+                    "advisory": { "id": "RUSTSEC-2023-002" }
+                }]
+            }
+        }"#;
+        let findings = parse_cargo_audit_json(json, "test-scan-id");
+        assert_eq!(findings.len(), 1);
+        assert!(findings[0].severity == crate::scanner::Severity::Low);
     }
 }

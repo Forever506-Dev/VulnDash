@@ -34,3 +34,6 @@ rusqlite = { version = "0.31", features = ["bundled"] }
 
 # HTTP client (GitHub API)
 reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
+
+# Temp directories for GitHub clone
+tempfile = "3"

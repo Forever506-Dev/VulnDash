@@ -15,15 +15,39 @@ pub async fn start_scan(
     let db_path = get_db_path(&app)?;
     let conn = crate::db::connect(&db_path).map_err(|e| e.to_string())?;
 
-    // Get project path
-    let (project_path,): (Option<String>,) = conn.query_row(
-        "SELECT path FROM projects WHERE id = ?1",
+    // Get project info (path + github fields)
+    let (project_path, github_owner, github_repo): (Option<String>, Option<String>, Option<String>) = conn.query_row(
+        "SELECT path, github_owner, github_repo FROM projects WHERE id = ?1",
         rusqlite::params![project_id],
-        |row| Ok((row.get(0)?,)),
+        |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
     ).map_err(|_| "Project not found".to_string())?;
 
-    let path_str = project_path.ok_or("Project has no local path")?;
-    let path = PathBuf::from(&path_str);
+    // Resolve scan path — clone GitHub repo if needed
+    let (path, _temp_dir) = match project_path {
+        Some(ref p) if !p.is_empty() => (PathBuf::from(p), None::<tempfile::TempDir>),
+        _ => {
+            // GitHub project — clone to temp dir
+            let owner = github_owner.ok_or("No local path and no GitHub owner")?;
+            let repo = github_repo.ok_or("No local path and no GitHub repo")?;
+            info!("Cloning {}/{} for scanning", owner, repo);
+
+            let tmp = tempfile::TempDir::new().map_err(|e| e.to_string())?;
+            let clone_url = format!("https://github.com/{}/{}.git", owner, repo);
+
+            let output = tokio::process::Command::new("git")
+                .args(["clone", "--depth", "1", &clone_url, tmp.path().to_str().unwrap()])
+                .output()
+                .await
+                .map_err(|e| format!("git not found: {}", e))?;
+
+            if !output.status.success() {
+                let stderr = String::from_utf8_lossy(&output.stderr);
+                return Err(format!("Clone failed: {}", stderr));
+            }
+            info!("Cloned to {:?}", tmp.path());
+            (tmp.path().to_path_buf(), Some(tmp))
+        }
+    };
 
     // Create scan record
     let scan = Scan {

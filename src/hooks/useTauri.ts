@@ -14,10 +14,6 @@ export async function addProjectGithub(owner: string, repo: string, name?: strin
   return invoke('add_project_github', { owner, repo, name });
 }
 
-export async function addProjectGithub(owner: string, repo: string, name?: string): Promise<Project> {
-  return invoke('add_project_github', { owner, repo, name });
-}
-
 export async function deleteProject(projectId: string): Promise<void> {
   return invoke('delete_project', { projectId });
 }

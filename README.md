@@ -223,30 +223,35 @@ See [CHANGELOG.md](./CHANGELOG.md) for release notes.
 
 ## Roadmap
 
-### MVP (v0.1) ✅
-- [x] App shell (Tauri 2 + React 19 + Tailwind v4)
-- [x] Local folder scanning (cargo-audit, npm audit, pip-audit)
-- [x] Basic dashboard with findings list
-- [x] SQLite persistence (projects + scan history)
-- [x] Security score calculation
+### v0.1.0 ✅ (Released)
+- [x] Tauri 2 + React 19 + Tailwind v4 desktop app
+- [x] Local folder + GitHub repo scanning
+- [x] Dependency scanning (cargo-audit, npm audit, pip-audit)
+- [x] Secrets detection (gitleaks + regex fallback)
+- [x] AI Coach with Ollama local LLM (CodeLlama, Mistral)
+- [x] Monaco Editor with vulnerable line highlighting
+- [x] Apply AI fix directly to source files
+- [x] Security score 0-100 with trend chart
+- [x] Scan history + diff view
+- [x] HTML report export
+- [x] Desktop notifications
+- [x] Watch mode (auto-rescan on file change)
+- [x] Auto-install missing tools
+- [x] Cross-platform builds (Windows, Linux, macOS)
 
-### v0.2
-- [ ] GitHub integration (OAuth + repo browser)
-- [ ] Secrets detection (gitleaks)
-- [ ] AI fix suggestions (Ollama local)
-- [ ] Dependency graph visualization
-
-### v0.3
-- [ ] PDF/HTML report export
+### v0.2 (Planned)
+- [ ] Docker image scanning (Trivy)
 - [ ] SBOM generation (CycloneDX)
 - [ ] License compliance checker
-- [ ] Webhook notifications
-
-### v1.0
+- [ ] Dependency graph visualization
+- [ ] GitHub PR integration (post scan as PR comment)
 - [ ] CI/CD CLI mode
-- [ ] Docker image scanning (Trivy)
-- [ ] GitHub PR integration
-- [ ] Code pattern analysis (Semgrep rules)
+
+### v1.0 (Future)
+- [ ] Code pattern analysis (Semgrep)
+- [ ] Custom detection rules
+- [ ] Team/organization support
+- [ ] SaaS dashboard (optional cloud sync)
 
 ---
 

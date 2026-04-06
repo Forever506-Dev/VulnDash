@@ -51,6 +51,7 @@ pub async fn export_html_report(
         tool: String,
         severity: String,
         title: String,
+        #[allow(dead_code)]
         description: Option<String>,
         file_path: Option<String>,
         line_number: Option<i64>,
@@ -83,7 +84,7 @@ pub async fn export_html_report(
     let high     = rows.iter().filter(|r| r.severity == "high").count();
     let medium   = rows.iter().filter(|r| r.severity == "medium").count();
     let low      = rows.iter().filter(|r| r.severity == "low").count();
-    let info     = rows.iter().filter(|r| r.severity == "info").count();
+    let _info    = rows.iter().filter(|r| r.severity == "info").count();
 
     // Score/grade
     let score = scan_score.unwrap_or(0);
@@ -106,7 +107,7 @@ pub async fn export_html_report(
     let date_str = {
         let secs = scan_started_at as u64;
         // Simple ISO-like formatting without chrono
-        let ts = std::time::UNIX_EPOCH + std::time::Duration::from_secs(secs);
+        let _ts = std::time::UNIX_EPOCH + std::time::Duration::from_secs(secs);
         format!("{}", humanize_ts(scan_started_at))
     };
 
@@ -124,7 +125,7 @@ pub async fn export_html_report(
             sev_color.0, sev_color.1, escape_html(&r.severity)
         );
         let cve = r.cve_id.as_deref().unwrap_or("—");
-        let file = match (&r.file_path, &r.line_number) {
+        let _file = match (&r.file_path, &r.line_number) {
             (Some(f), Some(l)) => format!("{}:{}", escape_html(f), l),
             (Some(f), None)    => escape_html(f),
             _                  => "—".to_string(),
@@ -137,14 +138,14 @@ pub async fn export_html_report(
               <td style="padding:10px 12px;color:#e4e4e7">{title}</td>
               <td style="padding:10px 12px;color:#a1a1aa;font-family:monospace;font-size:12px">{cve}</td>
               <td style="padding:10px 12px;color:#a1a1aa">{tool}</td>
-              <td style="padding:10px 12px;color:#71717a;font-family:monospace;font-size:11px">{file}</td>
+              <td style="padding:10px 12px;color:#71717a;font-family:monospace;font-size:11px">{cvss}</td>
               <td style="padding:10px 12px;color:#86efac">{fix}</td>
             </tr>"#,
             badge = badge,
             title = escape_html(&r.title),
             cve = escape_html(cve),
             tool = escape_html(&r.tool),
-            file = file,
+            cvss = cvss,
             fix = fix,
         )
     }).collect();

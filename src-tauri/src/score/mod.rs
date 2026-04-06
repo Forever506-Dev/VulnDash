@@ -24,6 +24,7 @@ pub fn calculate(findings: &[Finding]) -> i32 {
 }
 
 /// Convert a score to a letter grade.
+#[allow(dead_code)]
 pub fn grade(score: i32) -> &'static str {
     match score {
         90..=100 => "A",
@@ -35,6 +36,7 @@ pub fn grade(score: i32) -> &'static str {
 }
 
 /// Convert a score to a color class (for UI).
+#[allow(dead_code)]
 pub fn color_class(score: i32) -> &'static str {
     match score {
         90..=100 => "text-green-400",

@@ -410,6 +410,7 @@ function OnboardingScreen() {
     'pip-audit': '🐍',
     'gitleaks': '🔑',
     'git': '🌿',
+    'Ollama (AI)': '🤖',
     'Ollama': '🤖',
   };
 
@@ -436,7 +437,7 @@ function OnboardingScreen() {
                 className={`bg-zinc-900/60 border rounded-xl p-4 transition-all ${
                   tool.available
                     ? 'border-green-500/20'
-                    : 'border-white/[0.06]'
+                    : 'border-orange-500/20'
                 }`}
               >
                 <div className="flex items-center gap-2 mb-1">
@@ -449,7 +450,19 @@ function OnboardingScreen() {
                 {tool.available ? (
                   <p className="text-xs text-zinc-500 font-mono truncate">{tool.version}</p>
                 ) : (
-                  <p className="text-xs text-zinc-600 font-mono truncate">{tool.install_hint}</p>
+                  <div className="space-y-1">
+                    <p className="text-xs text-orange-400">{tool.install_hint}</p>
+                    {tool.install_url && (
+                      <a
+                        href={tool.install_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-red-400 underline hover:text-red-300 font-mono"
+                      >
+                        {tool.install_url.replace('https://', '')}
+                      </a>
+                    )}
+                  </div>
                 )}
               </div>
             ))}

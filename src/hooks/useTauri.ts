@@ -7,6 +7,7 @@ export interface ToolStatus {
   available: boolean;
   version: string | null;
   install_hint: string | null;
+  install_url: string | null;
 }
 
 export async function checkTools(): Promise<ToolStatus[]> {

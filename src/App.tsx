@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, FolderOpen, RefreshCw, Trash2, ChevronRight, AlertTriangle, CheckCircle, XCircle, Info } from 'lucide-react';
+import { Shield, FolderOpen, RefreshCw, Trash2, ChevronRight, CheckCircle, Github, X, Settings, Plus } from 'lucide-react';
 import type { Project, Scan, Finding } from './types';
-import { listProjects, addProjectLocal, deleteProject, startScan, getScanResults, listScans, scoreGrade, scoreColor, SEVERITY_COLORS } from './hooks/useTauri';
+import { listProjects, addProjectLocal, addProjectGithub, deleteProject, startScan, getScanResults, listScans, scoreGrade, scoreColor, SEVERITY_COLORS } from './hooks/useTauri';
 import { open } from '@tauri-apps/plugin-dialog';
 import './index.css';
 
@@ -122,7 +122,10 @@ function ProjectCard({
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
-          <p className="font-semibold text-zinc-100 truncate">{project.name}</p>
+          <p className="font-semibold text-zinc-100 truncate flex items-center gap-1.5">
+            {project.github_url && <Github className="w-3 h-3 text-zinc-400 shrink-0" />}
+            {project.name}
+          </p>
           <p className="text-xs text-zinc-500 mt-0.5 truncate font-mono">
             {project.path || project.github_url || 'No path'}
           </p>
@@ -162,6 +165,12 @@ export default function App() {
   const [scanning, setScanningId] = useState<string | null>(null);
   const [filterSeverity, setFilterSeverity] = useState<string>('all');
   const [loading, setLoading] = useState(true);
+  const [showGithubModal, setShowGithubModal] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [githubUrl, setGithubUrl] = useState('');
+  const [githubPat, setGithubPat] = useState(() => localStorage.getItem('vulndash_github_pat') || '');
+  const [addingGithub, setAddingGithub] = useState(false);
+  const [githubError, setGithubError] = useState('');
 
   useEffect(() => {
     loadProjects();
@@ -175,6 +184,30 @@ export default function App() {
       console.error(e);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleAddGithubProject() {
+    if (!githubUrl.trim()) return;
+    setAddingGithub(true);
+    setGithubError('');
+    try {
+      // Parse URL like https://github.com/owner/repo or owner/repo
+      const clean = githubUrl.trim().replace(/\.git$/, '');
+      const match = clean.match(/(?:github\.com\/)?([\w.-]+)\/([\w.-]+)/);
+      if (!match) {
+        setGithubError('Invalid URL. Use: https://github.com/owner/repo');
+        return;
+      }
+      const [, owner, repo] = match;
+      const project = await addProjectGithub(owner, repo);
+      setProjects(prev => [project, ...prev]);
+      setShowGithubModal(false);
+      setGithubUrl('');
+    } catch (e: any) {
+      setGithubError(e?.message || String(e));
+    } finally {
+      setAddingGithub(false);
     }
   }
 
@@ -242,23 +275,107 @@ export default function App() {
   return (
     <div className="flex h-screen bg-[#09090b] text-zinc-100 overflow-hidden">
 
+      {/* GitHub Modal */}
+      {showGithubModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-zinc-900 border border-white/[0.08] rounded-2xl p-6 w-full max-w-md shadow-2xl">
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-2">
+                <Github className="w-5 h-5 text-zinc-300" />
+                <h2 className="font-bold text-zinc-100">Add GitHub Repository</h2>
+              </div>
+              <button onClick={() => { setShowGithubModal(false); setGithubError(''); setGithubUrl(''); }} className="text-zinc-500 hover:text-zinc-300">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs text-zinc-400 mb-1.5 block">Repository URL</label>
+                <input
+                  type="text"
+                  value={githubUrl}
+                  onChange={e => setGithubUrl(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleAddGithubProject()}
+                  placeholder="https://github.com/owner/repo"
+                  className="w-full bg-zinc-800 border border-white/[0.08] rounded-xl px-4 py-2.5 text-sm text-zinc-100 placeholder-zinc-600 outline-none focus:border-red-500/40 transition-colors"
+                  autoFocus
+                />
+              </div>
+              {githubError && (
+                <p className="text-xs text-red-400">{githubError}</p>
+              )}
+              <button
+                onClick={handleAddGithubProject}
+                disabled={addingGithub || !githubUrl.trim()}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-red-500/10 text-red-400 border border-red-500/20 text-sm font-semibold hover:bg-red-500/20 transition-colors disabled:opacity-50"
+              >
+                <Plus className="w-4 h-4" />
+                {addingGithub ? 'Adding...' : 'Add Repository'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Settings Modal */}
+      {showSettings && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-zinc-900 border border-white/[0.08] rounded-2xl p-6 w-full max-w-md shadow-2xl">
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-2">
+                <Settings className="w-5 h-5 text-zinc-300" />
+                <h2 className="font-bold text-zinc-100">Settings</h2>
+              </div>
+              <button onClick={() => setShowSettings(false)} className="text-zinc-500 hover:text-zinc-300">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="text-xs text-zinc-400 mb-1.5 block">GitHub Personal Access Token</label>
+                <input
+                  type="password"
+                  value={githubPat}
+                  onChange={e => {
+                    setGithubPat(e.target.value);
+                    localStorage.setItem('vulndash_github_pat', e.target.value);
+                  }}
+                  placeholder="ghp_..."
+                  className="w-full bg-zinc-800 border border-white/[0.08] rounded-xl px-4 py-2.5 text-sm text-zinc-100 placeholder-zinc-600 outline-none focus:border-red-500/40 transition-colors font-mono"
+                />
+                <p className="text-xs text-zinc-600 mt-1.5">Used to scan private repos. Stored locally only.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Sidebar */}
       <div className="w-72 flex flex-col border-r border-white/[0.06] bg-zinc-950/50">
         {/* Header */}
         <div className="flex items-center gap-2.5 px-4 py-4 border-b border-white/[0.06]">
           <Shield className="w-5 h-5 text-red-500" />
           <span className="font-bold text-zinc-100">VulnDash</span>
-          <span className="ml-auto text-xs text-zinc-600">v0.1</span>
+          <button onClick={() => setShowSettings(true)} className="ml-auto text-zinc-600 hover:text-zinc-400 transition-colors">
+            <Settings className="w-4 h-4" />
+          </button>
         </div>
 
-        {/* Add project */}
-        <div className="p-3 border-b border-white/[0.06]">
+        {/* Add project buttons */}
+        <div className="p-3 border-b border-white/[0.06] space-y-2">
           <button
             onClick={handleAddProject}
-            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 text-sm font-medium hover:bg-red-500/20 transition-colors"
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-zinc-800 text-zinc-300 border border-white/[0.06] text-sm font-medium hover:bg-zinc-700 transition-colors"
           >
             <FolderOpen className="w-4 h-4" />
             Add Local Project
+          </button>
+          <button
+            onClick={() => setShowGithubModal(true)}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 text-sm font-medium hover:bg-red-500/20 transition-colors"
+          >
+            <Github className="w-4 h-4" />
+            Add GitHub Repo
           </button>
         </div>
 

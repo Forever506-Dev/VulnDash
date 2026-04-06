@@ -79,6 +79,90 @@ pub async fn add_project_local(
     Ok(project)
 }
 
+/// Add a project from a GitHub repository.
+#[tauri::command]
+pub async fn add_project_github(
+    app: tauri::AppHandle,
+    owner: String,
+    repo: String,
+    name: Option<String>,
+) -> Result<Project, String> {
+    if owner.trim().is_empty() {
+        return Err("GitHub owner must not be empty".to_string());
+    }
+    if repo.trim().is_empty() {
+        return Err("GitHub repo must not be empty".to_string());
+    }
+
+    let github_url = format!("https://github.com/{}/{}", owner, repo);
+    let project_name = name.unwrap_or_else(|| format!("{}/{}", owner, repo));
+
+    let project = Project {
+        id: Uuid::new_v4().to_string(),
+        name: project_name,
+        path: None,
+        github_url: Some(github_url.clone()),
+        github_owner: Some(owner.clone()),
+        github_repo: Some(repo.clone()),
+        created_at: Utc::now().timestamp(),
+        last_scan_at: None,
+        score: None,
+    };
+
+    let db_path = get_db_path(&app)?;
+    let conn = crate::db::connect(&db_path).map_err(|e| e.to_string())?;
+
+    conn.execute(
+        "INSERT INTO projects (id, name, github_url, github_owner, github_repo, created_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+        rusqlite::params![
+            project.id,
+            project.name,
+            project.github_url,
+            project.github_owner,
+            project.github_repo,
+            project.created_at
+        ],
+    ).map_err(|e| e.to_string())?;
+
+    Ok(project)
+}
+
+/// Add a project from a GitHub repository.
+#[tauri::command]
+pub async fn add_project_github(
+    app: tauri::AppHandle,
+    owner: String,
+    repo: String,
+    name: Option<String>,
+) -> Result<Project, String> {
+    if owner.trim().is_empty() || repo.trim().is_empty() {
+        return Err("Owner and repo must not be empty".into());
+    }
+    let project = Project {
+        id: Uuid::new_v4().to_string(),
+        name: name.unwrap_or_else(|| format!("{}/{}", owner, repo)),
+        path: None,
+        github_url: Some(format!("https://github.com/{}/{}", owner, repo)),
+        github_owner: Some(owner.clone()),
+        github_repo: Some(repo.clone()),
+        created_at: Utc::now().timestamp(),
+        last_scan_at: None,
+        score: None,
+    };
+    let db_path = get_db_path(&app)?;
+    let conn = crate::db::connect(&db_path).map_err(|e| e.to_string())?;
+    conn.execute(
+        "INSERT INTO projects (id, name, github_url, github_owner, github_repo, created_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+        rusqlite::params![
+            project.id, project.name, project.github_url,
+            project.github_owner, project.github_repo, project.created_at
+        ],
+    ).map_err(|e| e.to_string())?;
+    Ok(project)
+}
+
 /// Delete a project and all its scans/findings.
 #[tauri::command]
 pub async fn delete_project(app: tauri::AppHandle, project_id: String) -> Result<(), String> {

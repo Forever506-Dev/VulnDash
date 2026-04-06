@@ -10,6 +10,14 @@ export async function addProjectLocal(path: string, name?: string): Promise<Proj
   return invoke('add_project_local', { path, name });
 }
 
+export async function addProjectGithub(owner: string, repo: string, name?: string): Promise<Project> {
+  return invoke('add_project_github', { owner, repo, name });
+}
+
+export async function addProjectGithub(owner: string, repo: string, name?: string): Promise<Project> {
+  return invoke('add_project_github', { owner, repo, name });
+}
+
 export async function deleteProject(projectId: string): Promise<void> {
   return invoke('delete_project', { projectId });
 }

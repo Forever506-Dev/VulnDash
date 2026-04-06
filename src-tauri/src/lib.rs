@@ -39,6 +39,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::projects::list_projects,
             commands::projects::add_project_local,
+            commands::projects::add_project_github,
             commands::projects::delete_project,
             commands::scan::start_scan,
             commands::scan::get_scan_results,

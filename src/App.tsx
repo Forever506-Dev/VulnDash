@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, FolderOpen, RefreshCw, Trash2, ChevronRight, CheckCircle, Github, X, Settings, Plus } from 'lucide-react';
+import { Shield, FolderOpen, RefreshCw, Trash2, ChevronRight, CheckCircle, GitBranch, X, Settings, Plus } from 'lucide-react';
 import type { Project, Scan, Finding } from './types';
 import { listProjects, addProjectLocal, addProjectGithub, deleteProject, startScan, getScanResults, listScans, scoreGrade, scoreColor, SEVERITY_COLORS } from './hooks/useTauri';
 import { open } from '@tauri-apps/plugin-dialog';
@@ -123,7 +123,7 @@ function ProjectCard({
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-zinc-100 truncate flex items-center gap-1.5">
-            {project.github_url && <Github className="w-3 h-3 text-zinc-400 shrink-0" />}
+            {project.github_url && <GitBranch className="w-3 h-3 text-zinc-400 shrink-0" />}
             {project.name}
           </p>
           <p className="text-xs text-zinc-500 mt-0.5 truncate font-mono">
@@ -281,7 +281,7 @@ export default function App() {
           <div className="bg-zinc-900 border border-white/[0.08] rounded-2xl p-6 w-full max-w-md shadow-2xl">
             <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-2">
-                <Github className="w-5 h-5 text-zinc-300" />
+                <GitBranch className="w-5 h-5 text-zinc-300" />
                 <h2 className="font-bold text-zinc-100">Add GitHub Repository</h2>
               </div>
               <button onClick={() => { setShowGithubModal(false); setGithubError(''); setGithubUrl(''); }} className="text-zinc-500 hover:text-zinc-300">
@@ -374,7 +374,7 @@ export default function App() {
             onClick={() => setShowGithubModal(true)}
             className="w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 text-sm font-medium hover:bg-red-500/20 transition-colors"
           >
-            <Github className="w-4 h-4" />
+            <GitBranch className="w-4 h-4" />
             Add GitHub Repo
           </button>
         </div>

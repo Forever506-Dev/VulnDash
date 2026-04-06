@@ -30,6 +30,22 @@ export async function listScans(projectId: string): Promise<Scan[]> {
   return invoke('list_scans', { projectId });
 }
 
+export async function autoFixDeps(projectId: string): Promise<string> {
+  return invoke('auto_fix_deps', { projectId });
+}
+
+export async function exportHtmlReport(projectId: string, scanId: string, outputPath: string): Promise<void> {
+  return invoke('export_html_report', { projectId, scanId, outputPath });
+}
+
+export async function compareScansToPrevious(scanId: string): Promise<{
+  new_findings: Finding[];
+  fixed_count: number;
+  score_delta: number;
+}> {
+  return invoke('compare_scans', { scanId });
+}
+
 export function scoreGrade(score: number): string {
   if (score >= 90) return 'A';
   if (score >= 75) return 'B';

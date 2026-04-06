@@ -44,6 +44,9 @@ pub fn run() {
             commands::scan::start_scan,
             commands::scan::get_scan_results,
             commands::scan::list_scans,
+            commands::scan::compare_scans,
+            commands::scan::auto_fix_deps,
+            commands::report::export_html_report,
         ])
         .run(tauri::generate_context!())
         .expect("error while running VulnDash");

@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Shield, FolderOpen, RefreshCw, Trash2, ChevronRight, CheckCircle, GitBranch, X, Settings, Plus } from 'lucide-react';
 import type { Project, Scan, Finding } from './types';
-import { listProjects, addProjectLocal, addProjectGithub, deleteProject, startScan, getScanResults, listScans, scoreGrade, scoreColor, SEVERITY_COLORS } from './hooks/useTauri';
-import { open } from '@tauri-apps/plugin-dialog';
+import { listProjects, addProjectLocal, addProjectGithub, deleteProject, startScan, getScanResults, listScans, autoFixDeps, exportHtmlReport, compareScansToPrevious, scoreGrade, scoreColor, SEVERITY_COLORS } from './hooks/useTauri';
+import { open, save } from '@tauri-apps/plugin-dialog';
 import './index.css';
 
 // ── Score Gauge ──────────────────────────────────────────────────────────────
@@ -200,9 +200,91 @@ function ScoreTrendChart({ scans }: { scans: Scan[] }) {
   );
 }
 
+// ── Scan Diff Panel ──────────────────────────────────────────────────────────
+
+function ScanDiffPanel({
+  scanId,
+  onClose,
+}: {
+  scanId: string;
+  onClose: () => void;
+}) {
+  const [diff, setDiff] = React.useState<{
+    new_findings: Finding[];
+    fixed_count: number;
+    score_delta: number;
+  } | null>(null);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    compareScansToPrevious(scanId)
+      .then(setDiff)
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, [scanId]);
+
+  const deltaColor = diff
+    ? diff.score_delta > 0
+      ? 'text-green-400'
+      : diff.score_delta < 0
+      ? 'text-red-400'
+      : 'text-zinc-400'
+    : 'text-zinc-400';
+
+  return (
+    <div className="bg-zinc-900/80 border border-white/[0.08] rounded-xl p-4 mt-3">
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-sm font-semibold text-zinc-300">Diff vs Previous Scan</span>
+        <button onClick={onClose} className="text-zinc-500 hover:text-zinc-300">
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+      {loading ? (
+        <p className="text-xs text-zinc-500">Loading diff...</p>
+      ) : diff ? (
+        <div className="space-y-3">
+          <div className="flex items-center gap-4 text-xs">
+            <span className={`font-bold ${deltaColor}`}>
+              Score delta: {diff.score_delta > 0 ? '+' : ''}{diff.score_delta}
+            </span>
+            <span className="text-green-400">{diff.fixed_count} fixed</span>
+            <span className="text-red-400">{diff.new_findings.length} new</span>
+          </div>
+          {diff.fixed_count > 0 && (
+            <div className="rounded-lg bg-green-500/5 border border-green-500/20 px-3 py-2">
+              <p className="text-xs text-green-400 font-medium">✅ {diff.fixed_count} finding{diff.fixed_count !== 1 ? 's' : ''} resolved since last scan</p>
+            </div>
+          )}
+          {diff.new_findings.length > 0 && (
+            <div className="space-y-1.5">
+              <p className="text-xs font-medium text-red-400">New findings:</p>
+              {diff.new_findings.map(f => (
+                <div key={f.id} className="rounded-lg bg-red-500/5 border border-red-500/20 px-3 py-2">
+                  <div className="flex items-center gap-2">
+                    <SeverityBadge severity={f.severity} />
+                    <span className="text-xs text-zinc-200">{f.title}</span>
+                    <span className="text-xs text-zinc-500 ml-auto">{f.tool}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          {diff.new_findings.length === 0 && diff.fixed_count === 0 && (
+            <p className="text-xs text-zinc-500">No changes compared to previous scan.</p>
+          )}
+        </div>
+      ) : (
+        <p className="text-xs text-zinc-500">Could not load diff.</p>
+      )}
+    </div>
+  );
+}
+
 // ── History View ──────────────────────────────────────────────────────────────
 
 function HistoryView({ scans }: { scans: Scan[] }) {
+  const [selectedScanId, setSelectedScanId] = React.useState<string | null>(null);
+
   if (scans.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-4 text-zinc-600">
@@ -235,8 +317,14 @@ function HistoryView({ scans }: { scans: Scan[] }) {
           const grade = score != null ? scoreGrade(score) : '—';
           const color = score != null ? scoreColor(score) : 'text-zinc-500';
           const s = scan.summary;
+          const isSelected = selectedScanId === scan.id;
           return (
-            <div key={scan.id} className="bg-zinc-900/60 border border-white/[0.06] rounded-xl p-4">
+            <div key={scan.id}
+              className={`bg-zinc-900/60 border rounded-xl p-4 cursor-pointer transition-all ${
+                isSelected ? 'border-red-500/30' : 'border-white/[0.06] hover:border-white/10'
+              }`}
+              onClick={() => setSelectedScanId(isSelected ? null : scan.id)}
+            >
               <div className="flex items-center gap-4">
                 <div className="flex flex-col items-center w-14 shrink-0">
                   {score != null ? (
@@ -264,6 +352,11 @@ function HistoryView({ scans }: { scans: Scan[] }) {
                   <span className="text-xs text-zinc-500">{formatDuration(scan)}</span>
                 </div>
               </div>
+              {isSelected && (
+                <div onClick={e => e.stopPropagation()}>
+                  <ScanDiffPanel scanId={scan.id} onClose={() => setSelectedScanId(null)} />
+                </div>
+              )}
             </div>
           );
         })}
@@ -280,6 +373,8 @@ export default function App() {
   const [findings, setFindings] = useState<Finding[]>([]);
   const [scans, setScans] = useState<Scan[]>([]);
   const [scanning, setScanningId] = useState<string | null>(null);
+  const [autoFixing, setAutoFixing] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [filterSeverity, setFilterSeverity] = useState<string>('all');
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'findings' | 'history'>('findings');
@@ -384,15 +479,47 @@ export default function App() {
     }
   }
 
+  function showToast(message: string, type: 'success' | 'error') {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  }
+
+  async function handleAutoFix(project: Project) {
+    setAutoFixing(true);
+    try {
+      const summary = await autoFixDeps(project.id);
+      showToast(summary, 'success');
+      // Trigger rescan
+      await handleScan(project);
+    } catch (e: any) {
+      showToast(e?.message || String(e), 'error');
+    } finally {
+      setAutoFixing(false);
+    }
+  }
+
   const filteredFindings = filterSeverity === 'all'
     ? findings
     : findings.filter(f => f.severity === filterSeverity);
+
+  const hasFixableFindings = findings.some(f => f.fix_version != null && f.fix_version !== '');
 
   const latestScan = scans[0];
   const summary = latestScan?.summary;
 
   return (
     <div className="flex h-screen bg-[#09090b] text-zinc-100 overflow-hidden">
+
+      {/* Toast */}
+      {toast && (
+        <div className={`fixed bottom-6 right-6 z-50 max-w-sm px-4 py-3 rounded-xl border text-sm font-medium shadow-xl transition-all ${
+          toast.type === 'success'
+            ? 'bg-green-500/10 border-green-500/30 text-green-300'
+            : 'bg-red-500/10 border-red-500/30 text-red-400'
+        }`}>
+          {toast.message}
+        </div>
+      )}
 
       {/* GitHub Modal */}
       {showGithubModal && (
@@ -535,6 +662,17 @@ export default function App() {
                 <h1 className="font-bold text-lg text-zinc-100">{selectedProject.name}</h1>
                 <p className="text-xs text-zinc-500 font-mono truncate">{selectedProject.path}</p>
               </div>
+              {scans.length > 0 && (
+                <button
+                  onClick={async () => {
+                    const path = await save({ defaultPath: 'vulndash-report.html', filters: [{ name: 'HTML', extensions: ['html'] }] });
+                    if (path) await exportHtmlReport(selectedProject.id, scans[0].id, path);
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-zinc-800 text-zinc-300 border border-white/[0.06] text-sm font-semibold hover:bg-zinc-700 transition-colors"
+                >
+                  Export Report
+                </button>
+              )}
               <button
                 onClick={() => handleScan(selectedProject)}
                 disabled={scanning === selectedProject.id}
@@ -543,6 +681,16 @@ export default function App() {
                 <RefreshCw className={`w-4 h-4 ${scanning === selectedProject.id ? 'animate-spin' : ''}`} />
                 {scanning === selectedProject.id ? 'Scanning...' : 'Run Scan'}
               </button>
+              {hasFixableFindings && (
+                <button
+                  onClick={() => handleAutoFix(selectedProject)}
+                  disabled={autoFixing || scanning === selectedProject.id}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-green-500/10 text-green-400 border border-green-500/20 text-sm font-semibold hover:bg-green-500/20 transition-colors disabled:opacity-50"
+                >
+                  <CheckCircle className={`w-4 h-4 ${autoFixing ? 'animate-pulse' : ''}`} />
+                  {autoFixing ? 'Fixing...' : 'Auto-fix'}
+                </button>
+              )}
             </div>
 
             {/* Stats bar */}

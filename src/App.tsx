@@ -840,8 +840,6 @@ export default function App() {
       <div className="flex-1 flex flex-col overflow-hidden">
         {!selectedProject ? (
           <OnboardingScreen />
-            </div>
-          )
         ) : (
           <>
             {/* Project header */}

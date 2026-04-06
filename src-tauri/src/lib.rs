@@ -9,6 +9,7 @@ mod score;
 
 use tauri::Manager;
 use tracing::info;
+use commands::watch::WatchState;
 
 pub fn run() {
     tracing_subscriber::fmt()
@@ -37,6 +38,7 @@ pub fn run() {
             info!("Database initialized at {:?}", db_path);
             Ok(())
         })
+        .manage(WatchState::default())
         .invoke_handler(tauri::generate_handler![
             commands::projects::list_projects,
             commands::projects::add_project_local,
@@ -50,6 +52,8 @@ pub fn run() {
             commands::report::export_html_report,
             commands::ai::get_ai_fix,
             commands::ai::read_file_context,
+            commands::tools::check_tools,
+            commands::watch::toggle_watch,
         ])
         .run(tauri::generate_context!())
         .expect("error while running VulnDash");

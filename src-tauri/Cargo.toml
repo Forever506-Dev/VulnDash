@@ -40,3 +40,6 @@ tempfile = "3"
 
 # Regex for secret pattern matching
 regex = "1"
+
+# File system watcher for watch mode
+notify = { version = "6", features = ["serde"] }

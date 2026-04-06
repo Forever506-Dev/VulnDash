@@ -17,6 +17,18 @@ pub fn connect(db_path: &Path) -> Result<Connection> {
     Ok(conn)
 }
 
+/// Get the local filesystem path for a project.
+pub fn get_project_path(db_path: &Path, project_id: &str) -> Result<Option<String>> {
+    let conn = connect(db_path)?;
+    let mut stmt = conn.prepare("SELECT path FROM projects WHERE id = ?1")?;
+    let result = stmt.query_row([project_id], |row| row.get::<_, Option<String>>(0));
+    match result {
+        Ok(path) => Ok(path),
+        Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+        Err(e) => Err(e),
+    }
+}
+
 const SCHEMA: &str = "
 PRAGMA journal_mode=WAL;
 PRAGMA foreign_keys=ON;

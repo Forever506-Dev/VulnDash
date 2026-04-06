@@ -2,6 +2,17 @@ import { invoke } from '@tauri-apps/api/core';
 import type { Project, Scan, Finding } from '../types';
 export { SEVERITY_COLORS } from '../types';
 
+export interface ToolStatus {
+  name: string;
+  available: boolean;
+  version: string | null;
+  install_hint: string | null;
+}
+
+export async function checkTools(): Promise<ToolStatus[]> {
+  return invoke('check_tools');
+}
+
 export async function listProjects(): Promise<Project[]> {
   return invoke('list_projects');
 }
@@ -53,6 +64,10 @@ export async function readFileContext(filePath: string, lineNumber?: number): Pr
   target_line?: number;
 }> {
   return invoke('read_file_context', { filePath, lineNumber });
+}
+
+export async function toggleWatch(projectId: string, enabled: boolean): Promise<void> {
+  return invoke('toggle_watch', { projectId, enabled });
 }
 
 export async function getAiFix(findingId: string, dbPathStr: string): Promise<{

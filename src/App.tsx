@@ -2,18 +2,38 @@ import React, { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Shield, FolderOpen, RefreshCw, Trash2, ChevronRight, CheckCircle, GitBranch, X, Settings, Plus } from 'lucide-react';
 import type { Project, Scan, Finding } from './types';
-import { listProjects, addProjectLocal, addProjectGithub, deleteProject, startScan, getScanResults, listScans, autoFixDeps, exportHtmlReport, compareScansToPrevious, scoreGrade, scoreColor, SEVERITY_COLORS } from './hooks/useTauri';
+import { listProjects, addProjectLocal, addProjectGithub, deleteProject, startScan, getScanResults, listScans, autoFixDeps, exportHtmlReport, compareScansToPrevious, checkTools, scoreGrade, scoreColor, SEVERITY_COLORS, toggleWatch } from './hooks/useTauri';
+import type { ToolStatus } from './hooks/useTauri';
 import FindingDetailPanel from './components/FindingDetailPanel';
 import { open, save } from '@tauri-apps/plugin-dialog';
+import { listen } from '@tauri-apps/api/event';
 import './index.css';
 
 // ── Score Gauge ──────────────────────────────────────────────────────────────
 
 function ScoreGauge({ score }: { score: number }) {
-  const color = scoreColor(score);
-  const grade = scoreGrade(score);
+  const [displayScore, setDisplayScore] = useState(0);
+  const color = scoreColor(displayScore);
+  const grade = scoreGrade(displayScore);
   const circumference = 2 * Math.PI * 54;
-  const dash = (score / 100) * circumference;
+  const dash = (displayScore / 100) * circumference;
+
+  useEffect(() => {
+    let start: number | null = null;
+    const duration = 1000;
+    const from = 0;
+    const to = score;
+
+    function step(ts: number) {
+      if (!start) start = ts;
+      const progress = Math.min((ts - start) / duration, 1);
+      // ease-out
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setDisplayScore(Math.round(from + (to - from) * eased));
+      if (progress < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }, [score]);
 
   return (
     <div className="flex flex-col items-center gap-2">
@@ -22,7 +42,7 @@ function ScoreGauge({ score }: { score: number }) {
           <circle cx="60" cy="60" r="54" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="10" />
           <circle
             cx="60" cy="60" r="54" fill="none"
-            stroke={score >= 90 ? '#22c55e' : score >= 75 ? '#3b82f6' : score >= 60 ? '#eab308' : score >= 40 ? '#f97316' : '#ef4444'}
+            stroke={displayScore >= 90 ? '#22c55e' : displayScore >= 75 ? '#3b82f6' : displayScore >= 60 ? '#eab308' : displayScore >= 40 ? '#f97316' : '#ef4444'}
             strokeWidth="10"
             strokeLinecap="round"
             strokeDasharray={`${dash} ${circumference}`}
@@ -30,7 +50,7 @@ function ScoreGauge({ score }: { score: number }) {
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className={`text-3xl font-bold ${color}`}>{score}</span>
+          <span className={`text-3xl font-bold ${color}`}>{displayScore}</span>
           <span className={`text-lg font-semibold ${color}`}>{grade}</span>
         </div>
       </div>
@@ -372,6 +392,79 @@ function HistoryView({ scans }: { scans: Scan[] }) {
   );
 }
 
+// ── Onboarding Screen ────────────────────────────────────────────────────────
+
+function OnboardingScreen() {
+  const [tools, setTools] = useState<ToolStatus[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    checkTools()
+      .then(setTools)
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, []);
+
+  const toolIcons: Record<string, string> = {
+    'cargo-audit': '🦀',
+    'npm': '📦',
+    'pip-audit': '🐍',
+    'gitleaks': '🔑',
+    'git': '🌿',
+    'Ollama': '🤖',
+  };
+
+  return (
+    <div className="flex-1 flex flex-col items-center justify-center gap-8 p-8 overflow-y-auto">
+      <div className="text-center">
+        <h1 className="text-4xl font-bold text-zinc-100 mb-2">Welcome to VulnDash 🔐</h1>
+        <p className="text-zinc-400 text-lg">Your AI-powered security scanner</p>
+      </div>
+
+      <div className="w-full max-w-2xl">
+        <h2 className="text-sm font-semibold text-zinc-500 uppercase tracking-wider mb-4">Scanner Status</h2>
+        {loading ? (
+          <div className="grid grid-cols-2 gap-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="h-20 bg-zinc-900/60 border border-white/[0.06] rounded-xl animate-pulse" />
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-3">
+            {tools.map(tool => (
+              <div
+                key={tool.name}
+                className={`bg-zinc-900/60 border rounded-xl p-4 transition-all ${
+                  tool.available
+                    ? 'border-green-500/20'
+                    : 'border-white/[0.06]'
+                }`}
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-lg">{toolIcons[tool.name] ?? '🔧'}</span>
+                  <span className="font-semibold text-zinc-100 text-sm">{tool.name}</span>
+                  <span className="ml-auto text-base">
+                    {tool.available ? '✅' : '⚠️'}
+                  </span>
+                </div>
+                {tool.available ? (
+                  <p className="text-xs text-zinc-500 font-mono truncate">{tool.version}</p>
+                ) : (
+                  <p className="text-xs text-zinc-600 font-mono truncate">{tool.install_hint}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <p className="text-zinc-600 text-sm text-center max-w-md">
+        Add a local folder or GitHub repository from the sidebar to start scanning.
+      </p>
+    </div>
+  );
+}
+
 // ── Main App ──────────────────────────────────────────────────────────────────
 
 export default function App() {
@@ -381,6 +474,7 @@ export default function App() {
   const [scans, setScans] = useState<Scan[]>([]);
   const [scanning, setScanningId] = useState<string | null>(null);
   const [autoFixing, setAutoFixing] = useState(false);
+  const [watchEnabled, setWatchEnabled] = useState<Record<string, boolean>>({});
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [filterSeverity, setFilterSeverity] = useState<string>('all');
   const [loading, setLoading] = useState(true);
@@ -395,6 +489,21 @@ export default function App() {
 
   useEffect(() => {
     loadProjects();
+  }, []);
+
+  // Listen for watch:changed events and trigger rescan
+  useEffect(() => {
+    const unlistenPromise = listen<string>('watch:changed', (event) => {
+      const projectId = event.payload;
+      setProjects(prev => {
+        const project = prev.find(p => p.id === projectId);
+        if (project) {
+          handleScan(project);
+        }
+        return prev;
+      });
+    });
+    return () => { unlistenPromise.then(fn => fn()); };
   }, []);
 
   async function loadProjects() {
@@ -503,6 +612,18 @@ export default function App() {
       showToast(e?.message || String(e), 'error');
     } finally {
       setAutoFixing(false);
+    }
+  }
+
+  async function handleToggleWatch(project: Project) {
+    const current = watchEnabled[project.id] ?? false;
+    const next = !current;
+    try {
+      await toggleWatch(project.id, next);
+      setWatchEnabled(prev => ({ ...prev, [project.id]: next }));
+      showToast(next ? '👁 Watch mode enabled' : 'Watch mode disabled', 'success');
+    } catch (e: any) {
+      showToast(e?.message || String(e), 'error');
     }
   }
 
@@ -653,15 +774,25 @@ export default function App() {
             ))
           )}
         </div>
+
+        {/* Sidebar footer */}
+        <div className="px-4 py-3 border-t border-white/[0.06] space-y-0.5">
+          <p className="text-xs text-zinc-600">VulnDash v0.1</p>
+          <p className="text-xs text-zinc-700">Made with ♥ by Vincent Roussel</p>
+        </div>
       </div>
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {!selectedProject ? (
-          <div className="flex-1 flex flex-col items-center justify-center gap-4 text-zinc-600">
-            <Shield className="w-16 h-16 opacity-20" />
-            <p className="text-lg">Select a project to view its security status</p>
-          </div>
+          projects.length === 0 && !loading ? (
+            <OnboardingScreen />
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center gap-4 text-zinc-600">
+              <Shield className="w-16 h-16 opacity-20" />
+              <p className="text-lg">Select a project to view its security status</p>
+            </div>
+          )
         ) : (
           <>
             {/* Project header */}
@@ -699,6 +830,19 @@ export default function App() {
                   {autoFixing ? 'Fixing...' : 'Auto-fix'}
                 </button>
               )}
+              {/* Watch Mode toggle */}
+              <button
+                onClick={() => handleToggleWatch(selectedProject)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-colors border ${
+                  watchEnabled[selectedProject.id]
+                    ? 'bg-purple-500/20 text-purple-300 border-purple-500/40'
+                    : 'bg-zinc-800 text-zinc-400 border-white/[0.06] hover:bg-zinc-700'
+                }`}
+                title={watchEnabled[selectedProject.id] ? 'Disable watch mode' : 'Enable watch mode'}
+              >
+                <span className={watchEnabled[selectedProject.id] ? 'animate-pulse' : ''}>👁</span>
+                Watch
+              </button>
             </div>
 
             {/* Stats bar */}
@@ -755,9 +899,16 @@ export default function App() {
               {activeTab === 'history' ? (
                 <HistoryView scans={scans} />
               ) : findings.length === 0 && !latestScan ? (
-                <div className="flex flex-col items-center justify-center h-full gap-4 text-zinc-600">
-                  <CheckCircle className="w-12 h-12 opacity-30" />
-                  <p>No scans yet — run your first scan!</p>
+                <div className="flex flex-col items-center justify-center h-full gap-6 text-zinc-600">
+                  <div className="text-6xl animate-bounce">🚀</div>
+                  <div className="text-center">
+                    <p className="text-xl font-semibold text-zinc-400 mb-2">Run your first scan</p>
+                    <p className="text-zinc-600 text-sm">Click the button above to start scanning this project</p>
+                  </div>
+                  <div className="flex items-center gap-2 text-red-400 font-semibold animate-pulse">
+                    <span>Run your first scan</span>
+                    <span className="text-xl">→</span>
+                  </div>
                 </div>
               ) : (
                 <div className="flex gap-6">
@@ -791,10 +942,23 @@ export default function App() {
                     {/* Findings list */}
                     <div className="space-y-2">
                       {filteredFindings.length === 0 ? (
-                        <div className="flex items-center gap-2 text-green-400 text-sm">
-                          <CheckCircle className="w-4 h-4" />
-                          No {filterSeverity === 'all' ? '' : filterSeverity + ' '}findings — 
-                        </div>
+                        findings.length === 0 && latestScan ? (
+                          <div className="flex flex-col items-center justify-center py-16 gap-4">
+                            <div className="relative">
+                              <div className="w-20 h-20 rounded-full bg-green-500/10 border border-green-500/30 flex items-center justify-center">
+                                <CheckCircle className="w-10 h-10 text-green-400 animate-[spin_0.5s_ease-out]" />
+                              </div>
+                              <span className="absolute -top-1 -right-1 text-2xl">🎉</span>
+                            </div>
+                            <p className="text-xl font-semibold text-green-400">🎉 All clear! No vulnerabilities found.</p>
+                            <p className="text-zinc-600 text-sm">Your project passed all security checks.</p>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 text-green-400 text-sm">
+                            <CheckCircle className="w-4 h-4" />
+                            No {filterSeverity === 'all' ? '' : filterSeverity + ' '}findings —
+                          </div>
+                        )
                       ) : (
                         filteredFindings.map(finding => (
                           <FindingCard key={finding.id} finding={finding} onDetail={() => setSelectedFinding(finding)} />

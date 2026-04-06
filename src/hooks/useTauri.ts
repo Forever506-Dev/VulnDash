@@ -1,5 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import type { Project, Scan, Finding } from '../types';
+export { SEVERITY_COLORS } from '../types';
 
 export async function listProjects(): Promise<Project[]> {
   return invoke('list_projects');

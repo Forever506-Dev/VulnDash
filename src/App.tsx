@@ -3,6 +3,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { Shield, FolderOpen, RefreshCw, Trash2, ChevronRight, CheckCircle, GitBranch, X, Settings, Plus } from 'lucide-react';
 import type { Project, Scan, Finding } from './types';
 import { listProjects, addProjectLocal, addProjectGithub, deleteProject, startScan, getScanResults, listScans, autoFixDeps, exportHtmlReport, compareScansToPrevious, scoreGrade, scoreColor, SEVERITY_COLORS } from './hooks/useTauri';
+import FindingDetailPanel from './components/FindingDetailPanel';
 import { open, save } from '@tauri-apps/plugin-dialog';
 import './index.css';
 
@@ -51,7 +52,7 @@ function SeverityBadge({ severity }: { severity: Finding['severity'] }) {
 
 // ── Finding Card ──────────────────────────────────────────────────────────────
 
-function FindingCard({ finding }: { finding: Finding }) {
+function FindingCard({ finding, onDetail }: { finding: Finding; onDetail?: () => void }) {
   const [expanded, setExpanded] = useState(false);
 
   return (
@@ -69,7 +70,13 @@ function FindingCard({ finding }: { finding: Finding }) {
             {finding.cvss_score && <span className="ml-2">CVSS: {finding.cvss_score.toFixed(1)}</span>}
           </p>
         </div>
-        <ChevronRight className={`w-4 h-4 text-zinc-600 transition-transform shrink-0 ${expanded ? 'rotate-90' : ''}`} />
+        <button
+          onClick={e => { e.stopPropagation(); onDetail?.(); }}
+          className="shrink-0 p-1 rounded text-zinc-600 hover:text-zinc-300 hover:bg-zinc-800 transition-colors"
+          title="View details"
+        >
+          <ChevronRight className={`w-4 h-4 transition-transform ${expanded ? 'rotate-90' : ''}`} />
+        </button>
       </div>
 
       {expanded && (
@@ -378,6 +385,7 @@ export default function App() {
   const [filterSeverity, setFilterSeverity] = useState<string>('all');
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'findings' | 'history'>('findings');
+  const [selectedFinding, setSelectedFinding] = useState<Finding | null>(null);
   const [showGithubModal, setShowGithubModal] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [githubUrl, setGithubUrl] = useState('');
@@ -789,7 +797,7 @@ export default function App() {
                         </div>
                       ) : (
                         filteredFindings.map(finding => (
-                          <FindingCard key={finding.id} finding={finding} />
+                          <FindingCard key={finding.id} finding={finding} onDetail={() => setSelectedFinding(finding)} />
                         ))
                       )}
                     </div>
@@ -800,6 +808,9 @@ export default function App() {
           </>
         )}
       </div>
+      {selectedFinding && (
+        <FindingDetailPanel finding={selectedFinding} onClose={() => setSelectedFinding(null)} />
+      )}
     </div>
   );
 }

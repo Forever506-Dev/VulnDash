@@ -1,6 +1,7 @@
 pub mod cargo_audit;
 pub mod npm_audit;
 pub mod pip_audit;
+pub mod gitleaks;
 
 pub use types::*;
 

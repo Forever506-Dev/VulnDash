@@ -78,6 +78,9 @@ pub async fn start_scan(
     all_findings.extend(npm_findings);
     all_findings.extend(pip_findings);
 
+    let gitleaks_findings = crate::scanner::gitleaks::scan(&path, &scan.id).await;
+    all_findings.extend(gitleaks_findings);
+
     // Calculate score
     let final_score = score::calculate(&all_findings);
 

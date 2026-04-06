@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Shield, FolderOpen, RefreshCw, Trash2, ChevronRight, CheckCircle, GitBranch, X, Settings, Plus } from 'lucide-react';
 import type { Project, Scan, Finding } from './types';
 import { listProjects, addProjectLocal, addProjectGithub, deleteProject, startScan, getScanResults, listScans, scoreGrade, scoreColor, SEVERITY_COLORS } from './hooks/useTauri';
@@ -155,6 +156,122 @@ function ProjectCard({
   );
 }
 
+// ── Score Trend Chart ────────────────────────────────────────────────────────
+
+function ScoreTrendChart({ scans }: { scans: Scan[] }) {
+  // Oldest first for left-to-right progression
+  const data = [...scans]
+    .filter(s => s.score != null && s.finished_at != null)
+    .reverse()
+    .map(s => ({
+      date: new Date(s.finished_at! * 1000).toLocaleDateString('en-CA', { month: 'short', day: 'numeric' }),
+      score: s.score as number,
+    }));
+
+  if (data.length === 0) return null;
+
+  const latestScore = data[data.length - 1]?.score ?? 0;
+  const lineColor = latestScore >= 75 ? '#22c55e' : latestScore >= 50 ? '#eab308' : '#ef4444';
+
+  return (
+    <div className="bg-zinc-900/60 border border-white/[0.06] rounded-xl p-4">
+      <h3 className="text-sm font-semibold text-zinc-300 mb-4">Score Trend</h3>
+      <ResponsiveContainer width="100%" height={180}>
+        <LineChart data={data} margin={{ top: 4, right: 8, bottom: 4, left: -20 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+          <XAxis dataKey="date" tick={{ fill: '#71717a', fontSize: 11 }} tickLine={false} axisLine={false} />
+          <YAxis domain={[0, 100]} tick={{ fill: '#71717a', fontSize: 11 }} tickLine={false} axisLine={false} />
+          <Tooltip
+            contentStyle={{ background: '#18181b', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, fontSize: 12 }}
+            labelStyle={{ color: '#a1a1aa' }}
+            itemStyle={{ color: lineColor }}
+          />
+          <Line
+            type="monotone"
+            dataKey="score"
+            stroke={lineColor}
+            strokeWidth={2}
+            dot={{ fill: lineColor, r: 3, strokeWidth: 0 }}
+            activeDot={{ r: 5 }}
+          />
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+// ── History View ──────────────────────────────────────────────────────────────
+
+function HistoryView({ scans }: { scans: Scan[] }) {
+  if (scans.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full gap-4 text-zinc-600">
+        <CheckCircle className="w-12 h-12 opacity-30" />
+        <p>No scans yet — run your first scan!</p>
+      </div>
+    );
+  }
+
+  function formatDuration(scan: Scan): string {
+    if (!scan.finished_at || !scan.started_at) return '—';
+    const secs = scan.finished_at - scan.started_at;
+    if (secs < 60) return `${secs}s`;
+    return `${Math.floor(secs / 60)}m ${secs % 60}s`;
+  }
+
+  function formatDate(ts: number): string {
+    return new Date(ts * 1000).toLocaleString('en-CA', {
+      month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+    });
+  }
+
+  return (
+    <div className="space-y-4">
+      <ScoreTrendChart scans={scans} />
+
+      <div className="space-y-2">
+        {scans.map(scan => {
+          const score = scan.score;
+          const grade = score != null ? scoreGrade(score) : '—';
+          const color = score != null ? scoreColor(score) : 'text-zinc-500';
+          const s = scan.summary;
+          return (
+            <div key={scan.id} className="bg-zinc-900/60 border border-white/[0.06] rounded-xl p-4">
+              <div className="flex items-center gap-4">
+                <div className="flex flex-col items-center w-14 shrink-0">
+                  {score != null ? (
+                    <>
+                      <span className={`text-2xl font-bold ${color}`}>{score}</span>
+                      <span className={`text-sm font-semibold ${color}`}>{grade}</span>
+                    </>
+                  ) : (
+                    <span className="text-zinc-600 text-sm">{scan.status}</span>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-zinc-200">{formatDate(scan.started_at)}</p>
+                  {s && (
+                    <div className="flex items-center gap-3 mt-1">
+                      {s.critical > 0 && <span className="text-xs text-red-400">{s.critical} crit</span>}
+                      {s.high > 0 && <span className="text-xs text-orange-400">{s.high} high</span>}
+                      {s.medium > 0 && <span className="text-xs text-yellow-400">{s.medium} med</span>}
+                      {s.low > 0 && <span className="text-xs text-blue-400">{s.low} low</span>}
+                      {s.total === 0 && <span className="text-xs text-green-400">Clean</span>}
+                    </div>
+                  )}
+                </div>
+                <div className="text-right shrink-0">
+                  <span className="text-xs text-zinc-500">{formatDuration(scan)}</span>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ── Main App ──────────────────────────────────────────────────────────────────
 
 export default function App() {
@@ -165,6 +282,7 @@ export default function App() {
   const [scanning, setScanningId] = useState<string | null>(null);
   const [filterSeverity, setFilterSeverity] = useState<string>('all');
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'findings' | 'history'>('findings');
   const [showGithubModal, setShowGithubModal] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [githubUrl, setGithubUrl] = useState('');
@@ -244,6 +362,7 @@ export default function App() {
   async function handleSelectProject(project: Project) {
     setSelectedProject(project);
     setFindings([]);
+    setActiveTab('findings');
     try {
       const projectScans = await listScans(project.id);
       setScans(projectScans);
@@ -451,9 +570,35 @@ export default function App() {
               </div>
             )}
 
+            {/* Tab toggle */}
+            <div className="flex items-center gap-1 px-6 py-3 border-b border-white/[0.06]">
+              <button
+                onClick={() => setActiveTab('findings')}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  activeTab === 'findings'
+                    ? 'bg-zinc-800 text-zinc-100 border border-white/10'
+                    : 'text-zinc-500 hover:text-zinc-300'
+                }`}
+              >
+                Findings
+              </button>
+              <button
+                onClick={() => setActiveTab('history')}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  activeTab === 'history'
+                    ? 'bg-zinc-800 text-zinc-100 border border-white/10'
+                    : 'text-zinc-500 hover:text-zinc-300'
+                }`}
+              >
+                History
+              </button>
+            </div>
+
             {/* Dashboard content */}
             <div className="flex-1 overflow-auto p-6">
-              {findings.length === 0 && !latestScan ? (
+              {activeTab === 'history' ? (
+                <HistoryView scans={scans} />
+              ) : findings.length === 0 && !latestScan ? (
                 <div className="flex flex-col items-center justify-center h-full gap-4 text-zinc-600">
                   <CheckCircle className="w-12 h-12 opacity-30" />
                   <p>No scans yet — run your first scan!</p>

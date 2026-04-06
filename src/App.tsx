@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { RefreshCw, CheckCircle, GitBranch, X, Settings, Plus } from 'lucide-react';
 import type { Project, Scan, Finding } from './types';
 import {
@@ -8,7 +8,6 @@ import {
 } from './hooks/useTauri';
 import FindingDetailPanel from './components/FindingDetailPanel';
 import ScoreGauge from './components/ScoreGauge';
-import SeverityBadge from './components/SeverityBadge';
 import FindingCard from './components/FindingCard';
 import HistoryView from './components/HistoryView';
 import OnboardingScreen from './components/OnboardingScreen';

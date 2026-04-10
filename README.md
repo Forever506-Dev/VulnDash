@@ -22,9 +22,7 @@ No more running 5 different CLI tools manually. No more forgetting to check your
 
 ## Screenshots
 
-> _Screenshots coming soon — beta release_
-
-<!-- Add screenshots here once UI is stabilized -->
+![VulnDash Dashboard](https://raw.githubusercontent.com/Forever506-Dev/VulnDash/main/vulndash.png)
 
 ---
 
